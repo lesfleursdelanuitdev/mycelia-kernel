@@ -50,8 +50,8 @@ export async function allocateTimeSlice(subsystem, timeSliceDuration, stats, las
     
     const result = await subsystem.process(timeSliceDuration);
     
-    if (debug) {
-      console.log(`GlobalScheduler: ${subsystem.name} processed ${result.processed} messages`);
+    if (debug && result) {
+      console.log(`GlobalScheduler: ${subsystem.name} processed ${result.processed || 0} messages`);
     }
     
   } catch (error) {

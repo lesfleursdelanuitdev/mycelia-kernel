@@ -60,6 +60,7 @@
     "bench:integrated": "node --expose-gc src/messages/v2/benchmarks/pool-integration-simple.bench.js",
     "bench:stress": "node --expose-gc src/messages/v2/benchmarks/pool-stress-test.bench.js",
     "bench:stress:full": "node --expose-gc src/messages/v2/benchmarks/pool-stress-with-processing.bench.js",
+    "bench:stress:sustained": "node --expose-gc src/messages/v2/benchmarks/pool-stress-sustained.bench.js",
     "bench:all": "npm run bench:queue && npm run bench:pool && npm run bench:integrated"
   },
   "dependencies": {
