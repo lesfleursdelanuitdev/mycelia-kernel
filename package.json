@@ -57,7 +57,8 @@
     "bench": "node --expose-gc src/messages/v2/benchmarks/framework-performance.bench.js",
     "bench:queue": "node --expose-gc src/messages/v2/benchmarks/queue-performance.bench.js",
     "bench:pool": "node --expose-gc src/messages/v2/benchmarks/message-pool-performance.bench.js",
-    "bench:all": "npm run bench:queue && npm run bench:pool && npm run bench"
+    "bench:integrated": "node --expose-gc src/messages/v2/benchmarks/pool-integration-simple.bench.js",
+    "bench:all": "npm run bench:queue && npm run bench:pool && npm run bench:integrated"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",
