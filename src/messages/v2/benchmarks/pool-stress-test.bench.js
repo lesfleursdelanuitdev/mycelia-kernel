@@ -10,6 +10,8 @@
 
 import { MessageSystem } from '../models/message-system/message-system.v2.mycelia.js';
 import { BaseSubsystem } from '../models/base-subsystem/base.subsystem.mycelia.js';
+import { useQueue } from '../hooks/queue/use-queue.mycelia.js';
+import { useMessageProcessor } from '../hooks/message-processor/use-message-processor.mycelia.js';
 import { useRouter } from '../hooks/router/use-router.mycelia.js';
 import { useStatistics } from '../hooks/statistics/use-statistics.mycelia.js';
 
@@ -17,6 +19,8 @@ class TestSubsystem extends BaseSubsystem {
   constructor(name, ms) {
     super(name, { ms });
     this.use(useStatistics);
+    this.use(useQueue);
+    this.use(useMessageProcessor);
     this.use(useRouter);
   }
 }
@@ -48,15 +52,15 @@ async function stressTest() {
   await messageSystem.registerSubsystem(apiSubsystem);
   await messageSystem.registerSubsystem(dbSubsystem);
 
-  // Register handlers
+  // Register handlers (simple, fast handlers)
   let handlerCalls = 0;
   
-  apiSubsystem.registerRoute('users/{id}', async (msg, params) => {
+  apiSubsystem.registerRoute('users/{id}', (msg, params) => {
     handlerCalls++;
     return { userId: params.id, status: 'ok' };
   });
   
-  dbSubsystem.registerRoute('query', async (msg) => {
+  dbSubsystem.registerRoute('query', (msg) => {
     handlerCalls++;
     return { result: 'success', data: msg.body };
   });
@@ -118,8 +122,8 @@ async function stressTest() {
   const testStart = Date.now();
   const targetMessages = 1_000_000;
   const targetDurationMs = 60_000; // 60 seconds
-  const messagesPerBatch = 1000;
-  const delayBetweenBatches = Math.floor(targetDurationMs / (targetMessages / messagesPerBatch));
+  const messagesPerBatch = 10000; // Larger batches for higher throughput
+  const delayBetweenBatches = 100; // Small delay to allow processing
 
   // Run the stress test
   try {
