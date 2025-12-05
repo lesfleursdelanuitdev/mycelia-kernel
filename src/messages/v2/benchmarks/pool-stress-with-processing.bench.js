@@ -110,8 +110,10 @@ async function stressTestWithProcessing() {
     const mem = process.memoryUsage();
     const poolStats = messageSystem.getPoolStats();
     
-    const apiStats = apiSubsystem.getStatistics();
-    const dbStats = dbSubsystem.getStatistics();
+    const apiStats = apiSubsystem.find('statistics') || { messagesProcessed: 0 };
+    const dbStats = dbSubsystem.find('statistics') || { messagesProcessed: 0 };
+    const apiQueue = apiSubsystem.getQueueStatus();
+    const dbQueue = dbSubsystem.getQueueStatus();
     
     const sample = {
       time: elapsed.toFixed(1),
@@ -124,8 +126,8 @@ async function stressTestWithProcessing() {
       poolSize: poolStats.poolSize,
       reused: poolStats.reused,
       reuseRate: poolStats.reuseRate,
-      apiQueueSize: apiStats.queueSize,
-      dbQueueSize: dbStats.queueSize,
+      apiQueueSize: apiQueue.size,
+      dbQueueSize: dbQueue.size,
       apiProcessed: apiStats.messagesProcessed,
       dbProcessed: dbStats.messagesProcessed
     };
@@ -206,9 +208,9 @@ async function stressTestWithProcessing() {
   let waitTime = 0;
   const maxWaitTime = 30000; // Max 30 seconds to drain
   while (waitTime < maxWaitTime) {
-    const apiStats = apiSubsystem.getStatistics();
-    const dbStats = dbSubsystem.getStatistics();
-    const totalQueued = apiStats.queueSize + dbStats.queueSize;
+    const apiQueue = apiSubsystem.getQueueStatus();
+    const dbQueue = dbSubsystem.getQueueStatus();
+    const totalQueued = apiQueue.size + dbQueue.size;
     
     if (totalQueued === 0) {
       console.log('✓ All queues drained\n');
@@ -234,8 +236,10 @@ async function stressTestWithProcessing() {
   // Final statistics
   const finalMem = process.memoryUsage();
   const finalPoolStats = messageSystem.getPoolStats();
-  const apiStats = apiSubsystem.getStatistics();
-  const dbStats = dbSubsystem.getStatistics();
+  const apiStats = apiSubsystem.find('statistics') || { messagesProcessed: 0 };
+  const dbStats = dbSubsystem.find('statistics') || { messagesProcessed: 0 };
+  const apiQueue = apiSubsystem.getQueueStatus();
+  const dbQueue = dbSubsystem.getQueueStatus();
   
   const initialMem = metrics.samples[0];
   const finalSample = metrics.samples[metrics.samples.length - 1];
@@ -267,10 +271,10 @@ async function stressTestWithProcessing() {
   console.log(`   Efficiency:          ${finalPoolStats.efficiency}`);
 
   console.log('\n📈 SUBSYSTEM STATISTICS:\n');
-  console.log(`   API Messages:        ${apiStats.messagesProcessed.toLocaleString()}`);
-  console.log(`   API Queue (final):   ${apiStats.queueSize}`);
-  console.log(`   DB Messages:         ${dbStats.messagesProcessed.toLocaleString()}`);
-  console.log(`   DB Queue (final):    ${dbStats.queueSize}`);
+  console.log(`   API Messages:        ${(apiStats.messagesProcessed || 0).toLocaleString()}`);
+  console.log(`   API Queue (final):   ${apiQueue.size}`);
+  console.log(`   DB Messages:         ${(dbStats.messagesProcessed || 0).toLocaleString()}`);
+  console.log(`   DB Queue (final):    ${dbQueue.size}`);
 
   // Throughput stability
   const throughputs = metrics.samples.map(s => s.handlerThroughput);
