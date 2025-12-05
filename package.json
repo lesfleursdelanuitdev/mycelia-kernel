@@ -63,6 +63,7 @@
     "bench:stress:sustained": "node --expose-gc src/messages/v2/benchmarks/pool-stress-sustained.bench.js",
     "bench:build": "node --expose-gc src/messages/v2/benchmarks/build-system-performance.bench.js",
     "bench:commands": "node --expose-gc src/messages/v2/benchmarks/commands-requests-responses-performance.bench.js",
+    "bench:oneshot:opt": "node --expose-gc src/messages/v2/benchmarks/oneshot-optimization.bench.js",
     "bench:all": "npm run bench:queue && npm run bench:pool && npm run bench:integrated"
   },
   "dependencies": {

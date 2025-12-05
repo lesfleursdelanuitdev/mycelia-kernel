@@ -90,6 +90,13 @@ export const useResponses = createHook({
         msg.body.correlationId = String(inReplyTo);
       }
 
+      // OPTIMIZATION: Set processImmediately for one-shot responses
+      // One-shot reply paths follow pattern: "subsystem://request/oneShot/{id}"
+      // This bypasses the scheduler for faster response delivery
+      if (path.includes('/request/oneShot/') && msg.meta && typeof msg.meta.updateMutable === 'function') {
+        msg.meta.updateMutable({ processImmediately: true });
+      }
+
       // Check identity lazily when actually sending
       const currentIdentity = subsystem.identity;
       if (!currentIdentity || typeof currentIdentity.sendProtected !== 'function') {

@@ -70,8 +70,11 @@ export async function performRequest(subsystem, handler, message, timeoutOrOptio
   const replyTo = explicitReplyTo ?? `${nameString}://request/oneShot/${messageId}`;
   const routeForHandler = replyTo; // We treat replyTo as the route we register.
 
-  // NO metadata mutation - reply semantics live in send options only
-  // Message metadata is frozen in v2
+  // OPTIMIZATION: Set processImmediately flag to bypass scheduler for faster processing
+  // This allows one-shot requests to be processed immediately without waiting for scheduler
+  if (message.meta && typeof message.meta.updateMutable === 'function') {
+    message.meta.updateMutable({ processImmediately: true });
+  }
 
   return new Promise((resolve, reject) => {
     let timeoutId = null;
