@@ -249,4 +249,34 @@ export class Message {
   toString() {
     return toStringUtil(this);
   }
+
+  /**
+   * Reset message for object pooling (reuse existing instance)
+   * @private
+   * @param {string} path - New message path
+   * @param {any} body - New message body
+   * @param {Object} meta - New message metadata
+   */
+  _resetForPool(path, body, meta = {}) {
+    // Reuse existing object instead of creating new one
+    const messageData = MessageFactory.create(path, body, { meta });
+    
+    this.id = messageData.id;
+    this.path = messageData.path;
+    this.body = messageData.body;
+    this.meta = messageData.meta instanceof MessageMetadata 
+      ? messageData.meta 
+      : new MessageMetadata(messageData.meta?.fixed || messageData.meta || {}, messageData.meta?.mutable || {});
+  }
+
+  /**
+   * Clear sensitive data before returning to pool
+   * @private
+   */
+  _clearForPool() {
+    // Clear body to prevent memory leaks
+    this.body = null;
+    // Keep id, path, meta for potential debugging
+    // They're small and will be overwritten on reuse
+  }
 }

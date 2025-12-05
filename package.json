@@ -56,7 +56,8 @@
     "test:watch": "vitest watch",
     "bench": "node --expose-gc src/messages/v2/benchmarks/framework-performance.bench.js",
     "bench:queue": "node --expose-gc src/messages/v2/benchmarks/queue-performance.bench.js",
-    "bench:all": "npm run bench:queue && npm run bench"
+    "bench:pool": "node --expose-gc src/messages/v2/benchmarks/message-pool-performance.bench.js",
+    "bench:all": "npm run bench:queue && npm run bench:pool && npm run bench"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",

@@ -74,14 +74,11 @@ export class MessagePool {
       }
     } else {
       // Create new (pool was empty)
-      if (this.factory) {
-        message = this.factory(path, body, meta);
-      } else {
-        // Lazy import to avoid circular dependency
-        const { Message } = require('../models/message/message.mycelia.js');
-        message = new Message(path, body, meta);
+      if (!this.factory) {
+        throw new Error('MessagePool: factory function required. Pass Message class in constructor options.');
       }
       
+      message = this.factory(path, body, meta);
       message._isPooled = true;
       
       if (this.enableStats) {
