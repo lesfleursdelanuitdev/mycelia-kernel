@@ -118,13 +118,13 @@ subsystem.use(useHonoServer);     // Hono
 
 Extensive documentation with **151+ markdown files**:
 
-- [**Architecture Overview**](./src/messages/v2/docs/README.md)
-- [**Getting Started Guide**](./src/messages/v2/docs/GETTING-STARTED.md)
-- [**Hook System**](./src/messages/v2/docs/HOOKS-AND-FACETS-RATIONALE.md)
-- [**Security Model**](./src/messages/v2/docs/security/SECURITY-OVERVIEW.md)
-- [**API Reference**](./src/messages/v2/docs/)
-- [**Design Patterns**](./DESIGN-PATTERNS.md)
-- [**Performance Guide**](./PERFORMANCE-OPTIMIZATION-PLAN.md)
+- [**Documentation Index**](./docs/README.md) - Start here for organized docs
+- [**Design Patterns**](./docs/design/DESIGN-PATTERNS.md) - 20+ patterns explained
+- [**Architecture Overview**](./docs/architecture/PLUGIN-SYSTEM-ANALYSIS.md) - Hook-based plugin system
+- [**Security Model**](./docs/design/SECURITY-INTEGRATION-SOLUTION.md) - PKR identity & RWS permissions
+- [**Performance Guide**](./docs/performance/PERFORMANCE-OPTIMIZATION-PLAN.md) - Optimization strategies
+- [**Real-World Usage**](./docs/architecture/REAL-WORLD-USAGE-ANALYSIS.md) - Production patterns
+- [**API Reference**](./src/messages/v2/docs/) - Detailed API documentation
 
 ---
 
@@ -157,7 +157,7 @@ npm run bench
 npm run bench:queue
 ```
 
-See [Performance Optimization Plan](./PERFORMANCE-OPTIMIZATION-PLAN.md) for details.
+See [Performance Optimization Plan](./docs/performance/PERFORMANCE-OPTIMIZATION-PLAN.md) for details.
 
 ---
 
@@ -171,7 +171,7 @@ Mycelia implements **20+ design patterns**:
 - Observer Pattern (events/listeners)
 - Repository Pattern (storage abstraction)
 - Adapter Pattern (multi-backend support)
-- [And 14 more...](./DESIGN-PATTERNS.md)
+- [And 14 more...](./docs/design/DESIGN-PATTERNS.md)
 
 ---
 
