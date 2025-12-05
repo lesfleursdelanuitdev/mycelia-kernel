@@ -1,0 +1,49 @@
+# Development files
+node_modules/
+.git/
+.gitignore
+
+# Build and test
+dist/
+coverage/
+.nyc_output/
+*.log
+
+# Development database files
+*.db
+*.db-shm
+*.db-wal
+test-data/
+
+# Development tools
+vite.config.js
+vitest.config.js
+eslint.config.js
+postcss.config.js
+tailwind.config.js
+
+# Demo/example app files
+index.html
+public/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+PUSH-UPDATE.sh
+
+# Only include core framework, not demo app
+src/main.jsx
+src/App.jsx
+src/App.css
+src/index.css
+

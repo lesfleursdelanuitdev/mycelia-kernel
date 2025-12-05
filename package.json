@@ -1,50 +1,103 @@
 {
   "name": "mycelia-kernel",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Production-ready message-driven architecture framework with composable hooks, built-in security, and multi-backend support",
   "license": "MIT",
   "type": "module",
+  "author": {
+    "name": "lesfleursdelanuitdev",
+    "url": "https://github.com/lesfleursdelanuitdev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lesfleursdelanuitdev/mycelia-kernel.git"
+  },
+  "homepage": "https://github.com/lesfleursdelanuitdev/mycelia-kernel#readme",
+  "bugs": {
+    "url": "https://github.com/lesfleursdelanuitdev/mycelia-kernel/issues"
+  },
+  "keywords": [
+    "message-driven",
+    "architecture",
+    "framework",
+    "microservices",
+    "hooks",
+    "plugin-system",
+    "message-queue",
+    "websocket",
+    "storage",
+    "sqlite",
+    "indexeddb",
+    "security",
+    "observability",
+    "distributed-systems"
+  ],
+  "main": "./src/messages/v2/index.js",
+  "exports": {
+    ".": "./src/messages/v2/index.js",
+    "./hooks/*": "./src/messages/v2/hooks/*/index.js",
+    "./models/*": "./src/messages/v2/models/*/index.js",
+    "./utils/*": "./src/messages/v2/utils/*/index.js"
+  },
+  "files": [
+    "src/messages/",
+    "cli/",
+    "docs/",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE"
+  ],
   "bin": {
     "mycelia-kernel": "./cli/bin/mycelia-kernel.js"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "bench": "node --expose-gc src/messages/v2/benchmarks/queue-performance.bench.js",
-    "bench:queue": "node --expose-gc src/messages/v2/benchmarks/queue-performance.bench.js",
-    "bench:help": "echo 'Available benchmarks: bench, bench:queue'"
+    "bench:queue": "node --expose-gc src/messages/v2/benchmarks/queue-performance.bench.js"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.6",
-    "axios": "^1.13.2",
     "better-sqlite3": "^12.5.0",
     "commander": "^12.1.0",
-    "express": "^4.21.2",
-    "fastify": "^4.29.1",
-    "glob": "^11.0.0",
-    "hono": "^4.6.11",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.5"
+    "glob": "^11.0.0"
+  },
+  "peerDependencies": {
+    "@hono/node-server": "^1.19.0",
+    "axios": "^1.13.0",
+    "express": "^4.21.0",
+    "fastify": "^4.29.0",
+    "hono": "^4.6.0",
+    "ws": "^8.18.0"
+  },
+  "peerDependenciesMeta": {
+    "@hono/node-server": {
+      "optional": true
+    },
+    "axios": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    },
+    "hono": {
+      "optional": true
+    },
+    "ws": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@types/react": "^19.1.16",
-    "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.4",
-    "autoprefixer": "^10.4.21",
     "eslint": "^9.36.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.18",
-    "vite": "^7.1.7",
-    "vitest": "^2.1.5",
-    "ws": "^8.18.3"
+    "vitest": "^2.1.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
+
