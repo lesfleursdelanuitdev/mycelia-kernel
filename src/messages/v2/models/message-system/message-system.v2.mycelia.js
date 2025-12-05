@@ -228,6 +228,20 @@ export class MessageSystem extends BaseSubsystem {
   }
 
   /**
+   * Get all registered subsystems (needed by scheduler)
+   * 
+   * @returns {Array<BaseSubsystem>} Array of registered subsystems (excluding kernel)
+   */
+  getSubsystems() {
+    const registry = this.find('messageSystemRegistry');
+    if (!registry) {
+      return [];
+    }
+    // Get all subsystems and filter out kernel
+    return registry.values().filter(s => s.name !== 'kernel');
+  }
+
+  /**
    * Register a subsystem with access control and registry
    */
   async registerSubsystem(subsystemInstance, options = {}) {

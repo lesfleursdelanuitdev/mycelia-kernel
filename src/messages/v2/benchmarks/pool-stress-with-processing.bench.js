@@ -53,6 +53,15 @@ async function stressTestWithProcessing() {
   await messageSystem.registerSubsystem(apiSubsystem);
   await messageSystem.registerSubsystem(dbSubsystem);
 
+  // Start the scheduler to process messages
+  const scheduler = messageSystem.find('globalScheduler');
+  if (scheduler) {
+    scheduler.start();
+    console.log('✓ Global scheduler started\n');
+  } else {
+    console.warn('⚠️  Global scheduler not found!');
+  }
+
   // Track handler performance
   let handlerCalls = 0;
   let totalHandlerTime = 0;

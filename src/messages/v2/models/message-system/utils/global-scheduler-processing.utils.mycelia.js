@@ -17,7 +17,8 @@ export function calculateAverageUtilization(messageSystem) {
   let totalUtilization = 0;
   for (const subsystem of subsystems) {
     const queueStatus = subsystem.getQueueStatus();
-    const capacity = subsystem.queue.capacity;
+    // Get capacity from queue status or use a default
+    const capacity = queueStatus.capacity || 1000;
     const utilization = capacity > 0 ? queueStatus.size / capacity : 0;
     totalUtilization += utilization;
   }
