@@ -8,22 +8,13 @@
 
 import { MessageSystem } from '../models/message-system/message-system.v2.mycelia.js';
 import { BaseSubsystem } from '../models/base-subsystem/base.subsystem.mycelia.js';
-import { useQueue } from '../hooks/queue/use-queue.mycelia.js';
-import { useMessageProcessor } from '../hooks/message-processor/use-message-processor.mycelia.js';
-import { useScheduler } from '../hooks/scheduler/use-scheduler.mycelia.js';
-import { useRouter } from '../hooks/router/use-router.mycelia.js';
-import { useStatistics } from '../hooks/statistics/use-statistics.mycelia.js';
-import { useQueries } from '../hooks/queries/use-queries.mycelia.js';
+import { createCanonicalDefaultHooks } from '../models/defaults/default-hooks.mycelia.js';
 
 class TestSubsystem extends BaseSubsystem {
   constructor(name, ms) {
-    super(name, { ms });
-    this.use(useStatistics);
-    this.use(useQueries);     // Required by scheduler
-    this.use(useQueue);
-    this.use(useMessageProcessor);
-    this.use(useScheduler);  // CRITICAL: Needed for process() to work!
-    this.use(useRouter);
+    // Use canonical default hooks for proper subsystem behavior
+    const defaultHooks = createCanonicalDefaultHooks().list();
+    super(name, { ms, defaultHooks });
   }
 }
 
@@ -98,8 +89,10 @@ async function sustainedLoadTest() {
     const mem = process.memoryUsage();
     const poolStats = messageSystem.getPoolStats();
     
-    const apiStats = apiSubsystem.find('statistics') || { messagesProcessed: 0 };
-    const dbStats = dbSubsystem.find('statistics') || { messagesProcessed: 0 };
+    const apiStatsFacet = apiSubsystem.find('statistics');
+    const dbStatsFacet = dbSubsystem.find('statistics');
+    const apiStats = apiStatsFacet ? apiStatsFacet.getStatistics() : { messagesProcessed: 0 };
+    const dbStats = dbStatsFacet ? dbStatsFacet.getStatistics() : { messagesProcessed: 0 };
     const apiQueue = apiSubsystem.getQueueStatus();
     const dbQueue = dbSubsystem.getQueueStatus();
     
@@ -208,8 +201,10 @@ async function sustainedLoadTest() {
     }
     
     if (waitTime % 5000 === 0) {
-      const apiStats = apiSubsystem.find('statistics') || { messagesProcessed: 0 };
-      const dbStats = dbSubsystem.find('statistics') || { messagesProcessed: 0 };
+      const apiStatsFacet = apiSubsystem.find('statistics');
+      const dbStatsFacet = dbSubsystem.find('statistics');
+      const apiStats = apiStatsFacet ? apiStatsFacet.getStatistics() : { messagesProcessed: 0 };
+      const dbStats = dbStatsFacet ? dbStatsFacet.getStatistics() : { messagesProcessed: 0 };
       const processed = (apiStats.messagesProcessed || 0) + (dbStats.messagesProcessed || 0);
       console.log(`   Waiting... ${totalQueued} messages queued, ${processed.toLocaleString()} processed`);
     }
@@ -234,13 +229,15 @@ async function sustainedLoadTest() {
   // Final statistics
   const finalMem = process.memoryUsage();
   const finalPoolStats = messageSystem.getPoolStats();
-  const apiStats = apiSubsystem.find('statistics') || { messagesProcessed: 0 };
-  const dbStats = dbSubsystem.find('statistics') || { messagesProcessed: 0 };
+  const apiStatsFacet = apiSubsystem.find('statistics');
+  const dbStatsFacet = dbSubsystem.find('statistics');
+  const apiStats = apiStatsFacet ? apiStatsFacet.getStatistics() : { messagesProcessed: 0 };
+  const dbStats = dbStatsFacet ? dbStatsFacet.getStatistics() : { messagesProcessed: 0 };
   const apiQueue = apiSubsystem.getQueueStatus();
   const dbQueue = dbSubsystem.getQueueStatus();
   
   const totalProcessed = (apiStats.messagesProcessed || 0) + (dbStats.messagesProcessed || 0);
-  const completionRate = (totalProcessed / metrics.messagesSent) * 100;
+  const completionRate = totalProcessed > 0 ? (totalProcessed / metrics.messagesSent) * 100 : 0;
 
   console.log('\n📊 FINAL STATISTICS:\n');
   console.log(`   Duration:            ${testDuration.toFixed(1)}s`);
