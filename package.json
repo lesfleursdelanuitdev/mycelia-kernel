@@ -1,0 +1,50 @@
+{
+  "name": "mycelia-kernel",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "mycelia-kernel": "./cli/bin/mycelia-kernel.js"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "bench": "node --expose-gc src/messages/v2/benchmarks/queue-performance.bench.js",
+    "bench:queue": "node --expose-gc src/messages/v2/benchmarks/queue-performance.bench.js",
+    "bench:help": "echo 'Available benchmarks: bench, bench:queue'"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.6",
+    "axios": "^1.13.2",
+    "better-sqlite3": "^12.5.0",
+    "commander": "^12.1.0",
+    "express": "^4.21.2",
+    "fastify": "^4.29.1",
+    "glob": "^11.0.0",
+    "hono": "^4.6.11",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.4",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.22",
+    "globals": "^16.4.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "vite": "^7.1.7",
+    "vitest": "^2.1.5",
+    "ws": "^8.18.3"
+  }
+}
