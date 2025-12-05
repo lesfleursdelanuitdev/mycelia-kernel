@@ -167,9 +167,15 @@ async function benchmarkOneShotRequests() {
   const times = [];
   let successCount = 0;
   
-  // Create system once
-  const ms = new MessageSystem('test');
+  // Create system once (with debug for kernel access)
+  const ms = new MessageSystem('test', { debug: true });
   await ms.bootstrap();
+  
+  // START SCHEDULER - critical for message processing!
+  const scheduler = ms.find('globalScheduler');
+  if (scheduler) {
+    scheduler.start();
+  }
   
   class TestSubsystem extends BaseSubsystem {
     constructor(name, ms) {
@@ -189,13 +195,30 @@ async function benchmarkOneShotRequests() {
   // Get facets
   const requesterMessages = requester.find('messages');
   const requesterRequests = requester.find('requests');
-  if (!requesterMessages || !requesterRequests) {
-    throw new Error('Messages or requests facet not found');
+  const responderResponses = responder.find('responses');
+  if (!requesterMessages || !requesterRequests || !responderResponses) {
+    throw new Error('Required facets not found');
   }
   
-  // Register handler on responder
+  // Get kernel for ResponseManager access
+  const kernel = ms.getKernel();
+  
+  // Register handler on responder that sends proper response
   responder.registerRoute('responder://test', async (msg) => {
-    return { result: 'success', echo: msg.getBody() };
+    // Query ResponseManager to get replyTo path
+    const responseManager = kernel.getResponseManager();
+    const replyTo = responseManager?.getReplyTo(msg.getId());
+    
+    if (!replyTo) {
+      throw new Error(`No replyTo found for message ${msg.getId()}`);
+    }
+    
+    // Send response using responderResponses facet
+    await responderResponses.sendResponse({
+      path: replyTo,
+      inReplyTo: msg.getId(),
+      payload: { result: 'success', echo: msg.getBody() }
+    });
   });
   
   // Run iterations
@@ -225,6 +248,11 @@ async function benchmarkOneShotRequests() {
     
     const end = performance.now();
     times.push(end - start);
+  }
+  
+  // Stop scheduler before disposing
+  if (scheduler) {
+    scheduler.stop();
   }
   
   await ms.dispose();

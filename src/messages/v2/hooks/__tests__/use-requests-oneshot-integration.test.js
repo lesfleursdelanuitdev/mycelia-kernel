@@ -17,8 +17,8 @@ describe('One-Shot Request Integration', () => {
   let responder;
 
   beforeEach(async () => {
-    // Create message system
-    messageSystem = new MessageSystem('test');
+    // Create message system with debug enabled (needed to access kernel)
+    messageSystem = new MessageSystem('test', { debug: true });
     await messageSystem.bootstrap();
 
     // Get access control for wiring identities  
@@ -54,10 +54,24 @@ describe('One-Shot Request Integration', () => {
     // Check identities
     console.log('Requester has identity:', !!requester.identity);
     console.log('Responder has identity:', !!responder.identity);
+    
+    // START THE SCHEDULER! Messages won't be processed without it
+    const globalScheduler = messageSystem.find('globalScheduler');
+    if (globalScheduler) {
+      globalScheduler.start();
+      console.log('Global scheduler started');
+    } else {
+      console.log('WARNING: No global scheduler found');
+    }
   });
 
   afterEach(async () => {
     if (messageSystem) {
+      // Stop scheduler before disposing
+      const globalScheduler = messageSystem.find('globalScheduler');
+      if (globalScheduler) {
+        globalScheduler.stop();
+      }
       await messageSystem.dispose();
     }
   });
@@ -72,15 +86,15 @@ describe('One-Shot Request Integration', () => {
     expect(requesterRequests).toBeDefined();
     expect(responderResponses).toBeDefined();
 
+    // Capture kernel and messageSystem in closure for handler
+    const kernel = messageSystem.getKernel();
+
     // Register handler on responder that sends a proper response
     responder.registerRoute('responder://test', async (msg) => {
       console.log('Handler called! Message ID:', msg.getId());
       
-      // Query ResponseManager to find where to send the response
-      const root = responder.getRoot();
-      console.log('Root subsystem:', root?.name);
-      
-      const responseManager = root?.find('response-manager');
+      // Query ResponseManager from the kernel
+      const responseManager = kernel.getResponseManager();
       console.log('ResponseManager found:', !!responseManager);
       
       if (!responseManager) {
@@ -166,10 +180,13 @@ describe('One-Shot Request Integration', () => {
     const requesterRequests = requester.find('requests');
     const responderResponses = responder.find('responses');
 
+    // Capture kernel in closure for handler
+    const kernel = messageSystem.getKernel();
+
     // Register handler
     responder.registerRoute('responder://concurrent', async (msg) => {
-      // Query ResponseManager
-      const responseManager = responder.getRoot().find('response-manager');
+      // Query ResponseManager from kernel
+      const responseManager = kernel.getResponseManager();
       if (!responseManager) {
         throw new Error('ResponseManager not found');
       }
