@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-713%20passing-brightgreen)]()
-[![Code Quality](https://img.shields.io/badge/code%20quality-9.2%2F10-brightgreen)]()
+[![Code Quality](https://img.shields.io/badge/code%20quality-8.5%2F10-brightgreen)]()
 [![Documentation](https://img.shields.io/badge/docs-151%2B%20files-blue)]()
 
 > A sophisticated message-driven architecture framework with composable hooks, built-in security, and multi-backend support.
