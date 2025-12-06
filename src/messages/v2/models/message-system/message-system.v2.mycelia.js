@@ -355,6 +355,44 @@ export class MessageSystem extends BaseSubsystem {
     return this.#messagePool.warmup(count);
   }
 
+  /**
+   * Acquire a pooled Message instance
+   * 
+   * Used internally by sendPooled() and by kernel for sendPooledProtected().
+   * Acquires a Message from the pool, reusing existing instances when available.
+   * 
+   * @param {string} path - Message path
+   * @param {any} body - Message body
+   * @param {Object} [meta={}] - Message metadata
+   * @returns {Message} Pooled Message instance
+   * 
+   * @example
+   * const message = messageSystem.acquirePooledMessage('api://test', { id: 1 });
+   * // Use message...
+   * messageSystem.releasePooledMessage(message);
+   */
+  acquirePooledMessage(path, body, meta = {}) {
+    return this.#messagePool.acquire(path, body, meta);
+  }
+
+  /**
+   * Release a pooled Message instance
+   * 
+   * Used internally by sendPooled() and by kernel for sendPooledProtected().
+   * Releases a Message back to the pool for reuse.
+   * 
+   * @param {Message} message - Message to release
+   * @returns {boolean} True if released, false if discarded
+   * 
+   * @example
+   * const message = messageSystem.acquirePooledMessage('api://test', { id: 1 });
+   * // Use message...
+   * messageSystem.releasePooledMessage(message);
+   */
+  releasePooledMessage(message) {
+    return this.#messagePool.release(message);
+  }
+
     /** Returns an array of all facet kinds (capabilities) available on this subsystem. */
     get capabilities() { 
       if (!this.#api || !this.#api.__facets) return [];

@@ -45,6 +45,7 @@ describe('createIdentity', () => {
     };
     kernel = {
       sendProtected: vi.fn().mockResolvedValue('sent'),
+      sendPooledProtected: vi.fn().mockResolvedValue('sent'),
       getAccessControl: vi.fn(),
       getChannelManager: vi.fn(),
     };
@@ -80,6 +81,22 @@ describe('createIdentity', () => {
     const identity = createIdentity(principals, ownerPkr, kernel);
     await identity.sendProtected({ path: '/ping' });
     expect(kernel.sendProtected).toHaveBeenCalledWith(ownerPkr, { path: '/ping' }, {});
+  });
+
+  it('sendPooledProtected delegates to kernel', async () => {
+    const identity = createIdentity(principals, ownerPkr, kernel);
+    await identity.sendPooledProtected('api://users/123', { action: 'get' }, { meta: { traceId: 'abc' } });
+    expect(kernel.sendPooledProtected).toHaveBeenCalledWith(ownerPkr, 'api://users/123', { action: 'get' }, { meta: { traceId: 'abc' } });
+  });
+
+  it('sendPooledProtected throws if kernel does not support it', async () => {
+    const kernelWithoutPooled = {
+      sendProtected: vi.fn().mockResolvedValue('sent'),
+      getAccessControl: vi.fn(),
+      getChannelManager: vi.fn(),
+    };
+    const identity = createIdentity(principals, ownerPkr, kernelWithoutPooled);
+    await expect(identity.sendPooledProtected('api://test', {})).rejects.toThrow(/kernel must support sendPooledProtected/);
   });
 
   it('createResourceIdentity requires subsystem and access control', () => {

@@ -311,3 +311,4 @@ describe('Subsystem with Mocked Dependencies', () => {
 - [Testing Guide](./TESTING-GUIDE.md) - Comprehensive guide
 - [Testing Patterns](./TESTING-PATTERNS.md) - Common patterns
 
+

@@ -188,3 +188,4 @@ my-app/
 - Prisma client is shared via singleton pattern
 - Development scripts use `concurrently` for running multiple processes
 
+

@@ -152,5 +152,90 @@ describe('KernelSubsystem', () => {
     expect(router.route).toHaveBeenCalledTimes(1);
     expect(kernel.getChannelManager().verifyAccess).not.toHaveBeenCalled();
   });
+
+  it('sendPooledProtected uses pool and enforces security', async () => {
+    const kernel = new KernelSubsystem('kernel', { ms });
+    kernel.identity = { pkr: Symbol('kernel') };
+    const router = { route: vi.fn().mockResolvedValue('ok') };
+    kernel.setMsRouter(router);
+
+    const channelManager = {
+      getChannel: vi.fn().mockReturnValue({}),
+      verifyAccess: vi.fn().mockReturnValue(true),
+    };
+    kernel.getChannelManager = vi.fn().mockReturnValue(channelManager);
+
+    const responseManager = {
+      registerResponseRequiredFor: vi.fn(),
+      handleResponse: vi.fn().mockReturnValue({ ok: true }),
+    };
+    kernel.getResponseManager = vi.fn().mockReturnValue(responseManager);
+
+    // Mock MessageSystem with pool methods
+    const mockMessage = { path: 'canvas://channel/foo', getId: vi.fn().mockReturnValue('msg-1') };
+    const acquireSpy = vi.fn().mockReturnValue(mockMessage);
+    const releaseSpy = vi.fn();
+    kernel.messageSystem = {
+      acquirePooledMessage: acquireSpy,
+      releasePooledMessage: releaseSpy,
+    };
+
+    await kernel.sendPooledProtected(
+      { uuid: 'caller' },
+      'canvas://channel/foo',
+      { action: 'test' },
+      {
+        callerId: 'spoof',
+        meta: { traceId: 'abc123' },
+        responseRequired: { replyTo: 'canvas://reply', timeout: 1000 },
+      }
+    );
+
+    // Verify pool was used
+    expect(acquireSpy).toHaveBeenCalledWith('canvas://channel/foo', { action: 'test' }, { traceId: 'abc123' });
+    expect(releaseSpy).toHaveBeenCalledWith(mockMessage);
+
+    // Verify security was enforced
+    expect(router.route).toHaveBeenCalledWith(
+      mockMessage,
+      expect.objectContaining({
+        callerId: { uuid: 'caller' },
+        callerIdSetBy: kernel.identity.pkr,
+      }),
+    );
+    expect(channelManager.verifyAccess).toHaveBeenCalled();
+    expect(responseManager.registerResponseRequiredFor).toHaveBeenCalled();
+  });
+
+  it('sendPooledProtected releases message even on error', async () => {
+    const kernel = new KernelSubsystem('kernel', { ms });
+    kernel.identity = { pkr: Symbol('kernel') };
+    const router = { route: vi.fn().mockRejectedValue(new Error('Routing failed')) };
+    kernel.setMsRouter(router);
+
+    kernel.getChannelManager = vi.fn().mockReturnValue({
+      getChannel: vi.fn(),
+      verifyAccess: vi.fn().mockReturnValue(true),
+    });
+    kernel.getResponseManager = vi.fn().mockReturnValue({
+      registerResponseRequiredFor: vi.fn(),
+    });
+
+    // Mock MessageSystem with pool methods
+    const mockMessage = { path: 'canvas://test', getId: vi.fn().mockReturnValue('msg-1') };
+    const acquireSpy = vi.fn().mockReturnValue(mockMessage);
+    const releaseSpy = vi.fn();
+    kernel.messageSystem = {
+      acquirePooledMessage: acquireSpy,
+      releasePooledMessage: releaseSpy,
+    };
+
+    await expect(
+      kernel.sendPooledProtected({ uuid: 'caller' }, 'canvas://test', {})
+    ).rejects.toThrow('Routing failed');
+
+    // Verify message was released even though routing failed
+    expect(releaseSpy).toHaveBeenCalledWith(mockMessage);
+  });
 });
 
