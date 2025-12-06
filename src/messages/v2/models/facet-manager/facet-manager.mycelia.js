@@ -193,13 +193,27 @@ export class FacetManager {
           }
           // Check if facet already exists
           if (this.#facets.has(kind)) {
-            // Allow overwrite if facet has shouldOverwrite() returning true
+            const existingFacets = this.#facets.get(kind);
+            const existingFacetsArray = Array.isArray(existingFacets) ? existingFacets : [existingFacets];
+            
+            // Check if this is the same facet instance (added during verify phase)
+            const isSameInstance = existingFacetsArray.includes(facet);
+            
+            if (isSameInstance) {
+              // Same facet instance - it was added during verify phase for dependency lookups
+              // It's already registered, so we just need to ensure it gets initialized
+              // Don't add it again, but do track it for initialization
+              this.#txn.trackAddition(kind);
+              continue; // Skip registration, but it will be initialized below
+            }
+            
+            // Different facet instance - check if we can overwrite
             const canOverwrite = facet.shouldOverwrite?.() === true;
             if (!canOverwrite) {
               throw new Error(`FacetManager.addMany: facet '${kind}' already exists and new facet does not allow overwrite`);
             }
+            
             // Overwrite allowed - dispose old facets but keep them in the array for find() by orderIndex
-            const existingFacets = this.#facets.get(kind);
             if (Array.isArray(existingFacets)) {
               // Dispose all existing facets
               for (const oldFacet of existingFacets) {
@@ -234,13 +248,16 @@ export class FacetManager {
           }
           const facets = this.#facets.get(kind);
           if (Array.isArray(facets)) {
-            facets.push(facet);
-            // Sort by orderIndex (nulls go to end)
-            facets.sort((a, b) => {
-              const aIdx = a.orderIndex ?? Infinity;
-              const bIdx = b.orderIndex ?? Infinity;
-              return aIdx - bIdx;
-            });
+            // Only add if not already in the array
+            if (!facets.includes(facet)) {
+              facets.push(facet);
+              // Sort by orderIndex (nulls go to end)
+              facets.sort((a, b) => {
+                const aIdx = a.orderIndex ?? Infinity;
+                const bIdx = b.orderIndex ?? Infinity;
+                return aIdx - bIdx;
+              });
+            }
           } else {
             // Legacy: convert to array
             this.#facets.set(kind, [this.#facets.get(kind), facet]);
@@ -260,7 +277,12 @@ export class FacetManager {
             
             // Attach facet after successful init
             if (opts.attach && facet.shouldAttach?.()) {
-              this.attach(kind);
+              // Only attach if not already attached (same instance check)
+              // Check both if property exists and if it's the same instance
+              const alreadyAttached = kind in this.#subsystem && this.#subsystem[kind] === facet;
+              if (!alreadyAttached) {
+                this.attach(kind);
+              }
             }
           } catch (err) {
             // Local rollback for this facet
@@ -305,14 +327,26 @@ export class FacetManager {
     const facet = this.find(facetKind);
     if (!facet) throw new Error(`FacetManager.attach: facet '${facetKind}' not found`);
     
-    // Check if property already exists
+    // Check if property already exists and is actually a facet (not the API object or other properties)
     if (facetKind in this.#subsystem) {
-      // Allow overwrite if facet has shouldOverwrite() returning true
-      const canOverwrite = facet.shouldOverwrite?.() === true;
-      if (!canOverwrite) {
-        throw new Error(`FacetManager.attach: cannot attach '${facetKind}' – property already exists on subsystem and facet does not allow overwrite`);
+      const existingValue = this.#subsystem[facetKind];
+      // Skip if it's the API object (which has __facets property) - don't overwrite it!
+      if (existingValue && typeof existingValue === 'object' && '__facets' in existingValue && existingValue !== facet) {
+        // This is the API object, not a facet - skip attachment to avoid overwriting it
+        const logger = createSubsystemLogger(this.#subsystem);
+        logger.log(`Skipping attachment of facet '${facetKind}' - property name conflicts with subsystem API object`);
+        return facet;
+      } else if (existingValue === facet) {
+        // If it's the same facet instance, no need to re-attach
+        return facet;
+      } else {
+        // Different facet instance - check if we can overwrite
+        const canOverwrite = facet.shouldOverwrite?.() === true;
+        if (!canOverwrite) {
+          throw new Error(`FacetManager.attach: cannot attach '${facetKind}' – property already exists on subsystem and facet does not allow overwrite`);
+        }
+        // Overwrite allowed - replace the property
       }
-      // Overwrite allowed - replace the property
     }
     
     this.#subsystem[facetKind] = facet;
