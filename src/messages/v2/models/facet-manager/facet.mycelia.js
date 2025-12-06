@@ -125,7 +125,46 @@ export class Facet {
       await this.#initCallback({ ctx, api, subsystem, facet: this });
     }
     this.#isInit = true;
-    Object.freeze(this);
+    
+    // Freeze the object selectively: freeze non-underscore properties, but keep _ properties writable
+    // Properties starting with _ are typically mutable state (like _server, _isRunning) that needs modification after init
+    const ownKeys = Reflect.ownKeys(this);
+    
+    // Prevent adding new properties
+    Object.preventExtensions(this);
+    
+    // Freeze only non-underscore properties (make them non-writable)
+    // Keep _ properties writable for mutable state
+    for (const key of ownKeys) {
+      if (typeof key === 'string' && !key.startsWith('_')) {
+        const descriptor = Object.getOwnPropertyDescriptor(this, key);
+        if (descriptor && descriptor.configurable) {
+          try {
+            Object.defineProperty(this, key, {
+              ...descriptor,
+              writable: false,
+              configurable: false
+            });
+          } catch {
+            // Skip if we can't modify
+          }
+        }
+      } else if (typeof key === 'string' && key.startsWith('_')) {
+        // Ensure _ properties remain writable
+        const descriptor = Object.getOwnPropertyDescriptor(this, key);
+        if (descriptor && descriptor.configurable) {
+          try {
+            Object.defineProperty(this, key, {
+              ...descriptor,
+              writable: true,
+              configurable: false // Make non-configurable to prevent deletion, but keep writable
+            });
+          } catch {
+            // Skip if we can't modify
+          }
+        }
+      }
+    }
   }
 
   async dispose() {
