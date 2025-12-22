@@ -9,5 +9,10 @@ export default defineConfig({
       reportsDirectory: 'coverage',
     },
   },
+  css: false, // Disable CSS processing for tests
+  esbuild: {
+    // Skip postcss processing
+    target: 'node18',
+  },
 });
 

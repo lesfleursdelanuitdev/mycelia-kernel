@@ -11,7 +11,7 @@
  * @returns {Facet} Facet object (not attached, just for consistency)
  */
 import { createHook } from '../create-hook.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { AccessControlSubsystem } from '../../models/kernel-subsystem/access-control-subsystem/access-control.subsystem.mycelia.js';
 import { ErrorManagerSubsystem } from '../../models/kernel-subsystem/error-manager-subsystem/error-manager.subsystem.mycelia.js';
 import { ResponseManagerSubsystem } from '../../models/kernel-subsystem/response-manager-subsystem/response-manager.subsystem.mycelia.js';
@@ -86,10 +86,45 @@ export const useKernelServices = createHook({
       }
     ];
 
+    // Get messageSystem from subsystem
+    // BaseSubsystem sets this.messageSystem = options.ms in constructor
+    // Also check ctx.ms as fallback
+    let messageSystem = subsystem.messageSystem;
+    if (!messageSystem) {
+      messageSystem = subsystem.ctx?.ms;
+    }
+    
+    // If still not found, try to get from root (MessageSystem is root and is its own ms)
+    if (!messageSystem) {
+      const root = subsystem.getRoot?.();
+      if (root) {
+        messageSystem = root.messageSystem || root.ctx?.ms;
+        // MessageSystem is its own messageSystem
+        if (root.constructor?.name === 'MessageSystem') {
+          messageSystem = root;
+        }
+      }
+    }
+    
+    if (!messageSystem || messageSystem === null || messageSystem === undefined) {
+      throw new Error(
+        `useKernelServices: cannot find messageSystem. ` +
+        `subsystem.messageSystem=${subsystem.messageSystem}, ` +
+        `subsystem.ctx?.ms=${subsystem.ctx?.ms}, ` +
+        `subsystem.name=${subsystem.name}, ` +
+        `subsystem.constructor.name=${subsystem.constructor?.name}`
+      );
+    }
+
     // Create and add each child subsystem
     for (const childDef of childSubsystems) {
+      // Ensure ms is passed correctly
+      if (!messageSystem) {
+        throw new Error(`useKernelServices: messageSystem is null/undefined when creating ${childDef.name}`);
+      }
+      
       const childSubsystem = new childDef.SubsystemClass(childDef.name, {
-        ms: subsystem.ms || subsystem.messageSystem,
+        ms: messageSystem,
         config: childDef.config,
         debug: ctx.debug || subsystem.debug
       });

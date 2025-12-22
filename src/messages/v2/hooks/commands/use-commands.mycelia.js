@@ -1,6 +1,6 @@
 // hooks/commands/use-commands.mycelia.js
 
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 
 export const useCommands = createHook({

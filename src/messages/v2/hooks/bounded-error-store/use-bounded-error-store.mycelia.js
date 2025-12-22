@@ -10,7 +10,7 @@
  * @returns {Facet} Facet object with error store methods
  */
 import { BoundedErrorStore } from '../../models/kernel-subsystem/error-manager-subsystem/bounded-error-store.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 
 export const useBoundedErrorStore = createHook({

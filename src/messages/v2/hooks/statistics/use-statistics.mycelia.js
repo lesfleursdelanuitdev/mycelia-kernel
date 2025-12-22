@@ -10,7 +10,7 @@
  * @returns {Facet} Facet object with statistics methods
  */
 import { SubsystemStatistics } from './subsystem-statistics.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 import { getDebugFlag } from '../../utils/debug-flag.utils.mycelia.js';
 

@@ -1,5 +1,5 @@
 /**
- * findFacet Utility
+ * findFacet Utility (Re-export from mycelia-kernel-plugin)
  * 
  * Safely finds a facet by kind from a FacetManager.
  * 
@@ -14,17 +14,5 @@
  *   // Use routerFacet...
  * }
  */
-export function findFacet(facetManager, kind) {
-  if (!facetManager || typeof facetManager.find !== 'function') {
-    return false;
-  }
-  
-  const facet = facetManager.find(kind);
-  
-  if (!facet) {
-    return false;
-  }
-  
-  return { result: true, facet };
-}
+export { findFacet } from 'mycelia-kernel-plugin';
 

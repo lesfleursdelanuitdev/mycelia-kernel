@@ -11,7 +11,7 @@
  * @returns {Facet} Facet object with registry methods
  */
 import { MessageSystemRegistry } from '../../models/message-system/message-system-registry.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 import { getDebugFlag } from '../../utils/debug-flag.utils.mycelia.js';
 import { createLogger } from '../../utils/logger.utils.mycelia.js';

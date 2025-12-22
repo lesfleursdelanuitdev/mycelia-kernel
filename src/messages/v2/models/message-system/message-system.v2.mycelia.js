@@ -28,7 +28,7 @@
  */
 import { BaseSubsystem } from '../base-subsystem/base.subsystem.mycelia.js';
 import { KernelSubsystem } from '../kernel-subsystem/kernel.subsystem.mycelia.js';
-import { DependencyGraphCache } from '../subsystem-builder/dependency-graph-cache.mycelia.js';
+import { DependencyGraphCache } from 'mycelia-kernel-plugin/builder';
 import { useGlobalScheduler } from '../../hooks/global-scheduler/use-global-scheduler.mycelia.js';
 import { useMessages } from '../../hooks/messages/use-messages.mycelia.js';
 import { useMessageSystemRouter } from '../../hooks/message-system-router/use-message-system-router.mycelia.js';
@@ -46,13 +46,17 @@ export class MessageSystem extends BaseSubsystem {
   #messagePool = null; 
 
   constructor(name, options = {}) {
-    // BaseSubsystem expects an ms; we pass a placeholder and then set ctx.ms = this.
+    // Plugin system's BaseSubsystem accepts null for ms, we'll set it to self after
     super(name, {
       ...options,
-      ms: { _isPlaceholder: true }
+      ms: null  // Will be set to this after construction
     });
 
-    // Setup context (ms reference and globalScheduler config)
+    // Set ctx.ms to self (MessageSystem is its own message system)
+    this.ctx.ms = this;
+    this.messageSystem = this;
+
+    // Setup context (globalScheduler config)
     this.#setupContext(options);
 
     // Default hooks for MessageSystem

@@ -1,11 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { collectChildren, buildChildren, disposeChildren } from '../base-subsystem.utils.mycelia.js';
-import { FACET_KINDS } from '../../defaults/default-hooks.mycelia.js';
 
 describe('base-subsystem.utils', () => {
   const makeParent = (reg) => ({
     ctx: { graphCache: { cache: true } },
-    find: vi.fn((kind) => (kind === FACET_KINDS.HIERARCHY ? { children: reg } : null)),
+    find: vi.fn((kind) => (kind === 'hierarchy' ? { children: reg } : null)),
     children: reg,
   });
 
@@ -14,7 +13,7 @@ describe('base-subsystem.utils', () => {
     const parent = makeParent(registry);
     const children = collectChildren(parent);
     expect(children).toEqual(['child1']);
-    expect(parent.find).toHaveBeenCalledWith(FACET_KINDS.HIERARCHY);
+    expect(parent.find).toHaveBeenCalledWith('hierarchy');
   });
 
   it('collectChildren handles Map and array fallbacks', () => {

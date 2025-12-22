@@ -1,5 +1,5 @@
 /**
- * Debug Flag Utilities
+ * Debug Flag Utilities (Re-export from mycelia-kernel-plugin)
  * 
  * Provides standardized debug flag extraction from configuration and context.
  */
@@ -37,13 +37,5 @@
  * // Returns: false (default)
  * ```
  */
-export function getDebugFlag(config, ctx) {
-  if (config?.debug !== undefined) {
-    return !!config.debug;
-  }
-  if (ctx?.debug !== undefined) {
-    return !!ctx.debug;
-  }
-  return false;
-}
+export { getDebugFlag } from 'mycelia-kernel-plugin';
 

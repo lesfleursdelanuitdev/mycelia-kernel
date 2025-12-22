@@ -20,7 +20,7 @@
  * - This hook NEVER touches kernel or ChannelManager directly.
  * - All access goes through identity, which is allowed to talk to kernel services.
  */
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 
 export const useChannels = createHook({

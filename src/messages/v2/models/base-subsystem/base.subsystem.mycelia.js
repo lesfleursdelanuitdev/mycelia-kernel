@@ -1,19 +1,15 @@
-import { SubsystemBuilder } from '../subsystem-builder/subsystem-builder.mycelia.js';
-import { FacetManager } from '../facet-manager/facet-manager.mycelia.js';
-import { disposeChildren } from './base-subsystem.utils.mycelia.js';
-import { createSubsystemLogger } from '../../utils/logger.utils.mycelia.js';
+import { BaseSubsystem as PluginBaseSubsystem } from 'mycelia-kernel-plugin/system';
 import { FACET_KINDS } from '../defaults/default-hooks.mycelia.js';
-import { DependencyGraphCache } from '../subsystem-builder/dependency-graph-cache.mycelia.js';
 
-export class BaseSubsystem {
-  _isBuilt = false;
-  _buildPromise = null;
-  _disposePromise = null;
-  _builder = null;
-  _initCallbacks = [];
-  _disposeCallbacks = [];
-  _parent = null; // ← parent subsystem
-
+/**
+ * BaseSubsystem for Mycelia Kernel
+ * 
+ * Extends the plugin system's BaseSubsystem with mycelia-specific requirements:
+ * - Requires options.ms (MessageSystem instance)
+ * - Functional message processing (accept, process, etc.)
+ * - Mycelia-specific facet kind constants
+ */
+export class BaseSubsystem extends PluginBaseSubsystem {
   /**
    * @param {string} name - Unique name for the subsystem
    * @param {Object} options - Configuration options
@@ -23,33 +19,28 @@ export class BaseSubsystem {
    *   Each value is the configuration object for that specific hook/facet.
    */
   constructor(name, options = {}) {
-    if (!name || typeof name !== 'string')
+    // Check name first (parent will also check, but we want consistent error order)
+    if (!name || typeof name !== 'string') {
       throw new Error('BaseSubsystem: name must be a non-empty string');
-    if (!options.ms)
-      throw new Error('BaseSubsystem: options.ms is required');
-
-    this.name = name;
-    this.options = options;
-    this.messageSystem = options.ms;
-
-    // create the context object
-    this.ctx = {};
-    this.ctx.ms = options.ms;
-    this.ctx.config = options.config || {}; // Optional configuration object keyed by facet kind
-    this.ctx.debug = !!options.debug;
+    }
     
-    // Legacy property for backward compatibility (use ctx.debug instead)
-    this.debug = this.ctx.debug;
+    // Enforce ms requirement for mycelia-kernel
+    // Allow null (MessageSystem passes null and sets it to itself after construction)
+    // But require it to be explicitly provided (not undefined)
+    if (options.ms === undefined) {
+      throw new Error('BaseSubsystem: options.ms is required');
+    }
 
-    this.defaultHooks = options.defaultHooks;
-    this.hooks = [];
-    this._builder = new SubsystemBuilder(this);
-    this.api = { name, 
-        __facets: new FacetManager(this) };
-    this.coreProcessor = null;
+    // Call parent constructor (plugin system accepts options.ms)
+    super(name, options);
+
+    // Ensure messageSystem property is set (parent sets it, but we want to be explicit)
+    this.messageSystem = options.ms;
+    this.ctx.ms = options.ms;
   }
 
   // ==== Hierarchy Management ====
+  // Inherited from plugin system, but override to use FACET_KINDS
 
   /** Assign a parent subsystem (called during child registration). */
   setParent(parent) {
@@ -57,11 +48,8 @@ export class BaseSubsystem {
     if (hierarchy) {
       return hierarchy.setParent(parent);
     }
-    // Fallback if hierarchy facet not present
-    if (parent && typeof parent !== 'object')
-      throw new Error(`${this.name}: parent must be an object or null`);
-    this._parent = parent;
-    return this;
+    // Fallback to parent implementation
+    return super.setParent(parent);
   }
 
   /** Retrieve the parent subsystem. */
@@ -70,8 +58,8 @@ export class BaseSubsystem {
     if (hierarchy) {
       return hierarchy.getParent();
     }
-    // Fallback if hierarchy facet not present
-    return this._parent;
+    // Fallback to parent implementation
+    return super.getParent();
   }
 
   /** True if this subsystem has no parent (i.e., top-level). */
@@ -80,8 +68,8 @@ export class BaseSubsystem {
     if (hierarchy) {
       return hierarchy.isRoot();
     }
-    // Fallback if hierarchy facet not present
-    return this._parent === null;
+    // Fallback to parent implementation
+    return super.isRoot();
   }
 
   /** Returns the root subsystem by traversing up the parent chain. */
@@ -90,156 +78,25 @@ export class BaseSubsystem {
     if (hierarchy) {
       return hierarchy.getRoot();
     }
-    // Fallback if hierarchy facet not present
-    let current = this;
-    while (current._parent !== null) {
-      current = current._parent;
-    }
-    return current;
+    // Fallback to parent implementation
+    return super.getRoot();
   }
 
-  /**
-   * Returns a fully-qualified subsystem name string.
-   * Example:
-   * Root subsystem "kernel" → "kernel://"
-   * Child subsystem "cache" under "kernel" → "kernel://cache"
-   * Grandchild "manager" → "kernel://cache/manager"
-   */
-  getNameString() {
-    if (this._parent === null) {
-      return `${this.name}://`;
-    }
-    const parentName = this._parent.getNameString();
-    // ensure no accidental trailing "//"
-    return `${parentName.replace(/\/$/, '')}/${this.name}`;
-  }
-
-  // ==== State getters ====
-
-  get isBuilt() { return this._isBuilt; }
-
-  /** Returns an array of all facet kinds (capabilities) available on this subsystem. */
-  get capabilities() { return this.api.__facets.getAllKinds(); }
-
-  // ==== Hook registration ====
-
-  use(hook) {
-    if (this._isBuilt)
-      throw new Error(`${this.name}: cannot add hooks after build()`);
-    if (typeof hook !== 'function')
-      throw new Error(`${this.name}: hook must be a function`);
-    this.hooks.push(hook);
-    return this;
-  }
-
-  onInit(cb) {
-    if (typeof cb !== 'function')
-      throw new Error(`${this.name}: onInit callback must be a function`);
-    this._initCallbacks.push(cb);
-    return this;
-  }
-
-  onDispose(cb) {
-    if (typeof cb !== 'function')
-      throw new Error(`${this.name}: onDispose callback must be a function`);
-    this._disposeCallbacks.push(cb);
-    return this;
-  }
-
-  /**
-   * Find a facet by kind and optional orderIndex
-   * @param {string} kind - Facet kind to find
-   * @param {number} [orderIndex] - Optional order index. If provided, returns facet at that index. If not, returns the last facet (highest orderIndex).
-   * @returns {Object|undefined} Facet instance or undefined if not found
-   */
-  find(kind, orderIndex = undefined) { return this.api.__facets.find(kind, orderIndex); }
-  
-  /**
-   * Get a facet by its index in the array of facets of that kind
-   * @param {string} kind - Facet kind to find
-   * @param {number} index - Zero-based index in the array of facets of this kind
-   * @returns {Object|undefined} Facet instance or undefined if not found
-   */
-  getByIndex(kind, index) { return this.api.__facets.getByIndex(kind, index); }
-
-  // ==== Lifecycle ====
+  // ==== Lifecycle Override ====
 
   async build(ctx = {}) {
-    if (this._isBuilt) return this;
-    if (this._buildPromise) return this._buildPromise;
-
-    this._buildPromise = (async () => {
-      try {
-        // Determine graphCache: use provided, inherited from parent, or create new
-        let graphCache = ctx.graphCache || this.ctx?.graphCache || this.ctx?.parent?.graphCache;
+    // Call parent build first
+    await super.build(ctx);
         
-        if (!graphCache) {
-          // Create new cache with default capacity (configurable via ctx.config.graphCache.capacity)
-          const cacheCapacity = ctx.config?.graphCache?.capacity || 100;
-          graphCache = new DependencyGraphCache(cacheCapacity);
-        }
-        
-        // Set graphCache on ctx so it's available after build
-        this.ctx.graphCache = graphCache;
-        
-        this._builder.withCtx(ctx); // any additional context to be passed to the builder
-        await this._builder.build(graphCache); // Pass graphCache explicitly
-        for (const cb of this._initCallbacks)
-          await cb(this.api, this.ctx);
-        this._isBuilt = true;
-        
-        // Set coreProcessor based on subsystem type
+    // Set coreProcessor based on subsystem type (mycelia-specific)
         this.coreProcessor = this.api.isSynchronous 
           ? this.find(FACET_KINDS.SYNCHRONOUS) 
           : this.find(FACET_KINDS.PROCESSOR);
         
-        const logger = createSubsystemLogger(this);
-        logger.log('Built successfully');
         return this;
-      } finally {
-        this._buildPromise = null;
-      }
-    })();
-
-    return this._buildPromise;
   }
 
-  async dispose() {
-    if (!this._isBuilt && !this._buildPromise) return;
-    if (this._disposePromise) return this._disposePromise;
-
-    const waitBuild = this._buildPromise ? this._buildPromise.catch(() => {}) : Promise.resolve();
-
-    this._disposePromise = (async () => {
-      try {
-        await waitBuild;
-        if (!this._isBuilt) return;
-
-        await disposeChildren(this);
-        if (this.api && this.api.__facets) {
-          await this.api.__facets.disposeAll(this);
-        }
-
-        const logger = createSubsystemLogger(this);
-        for (const cb of this._disposeCallbacks) {
-          try { await cb(); }
-          catch (err) { logger.error('Dispose callback error:', err); }
-        }
-
-        this._isBuilt = false;
-        this.coreProcessor = null;
-        this._builder.invalidate();
-
-        logger.log('Disposed');
-      } finally {
-        this._disposePromise = null;
-      }
-    })();
-
-    return this._disposePromise;
-  }
-
-  // ==== Message flow ====
+  // ==== Message flow (Override plugin system's no-ops) ====
 
   pause() {
     const scheduler = this.find(FACET_KINDS.SCHEDULER);
@@ -289,12 +146,11 @@ export class BaseSubsystem {
     return core?.processTick ? await core.processTick() : null;
   }
 
-  // ==== Routing ====
+  // ==== Routing (Override to use FACET_KINDS) ====
 
   registerRoute(pattern, handler, routeOptions = {}) {
     const router = this.find(FACET_KINDS.ROUTER);
     if (!router?.registerRoute) {
-      //throw new Error(`${this.name}: missing router facet`);
       return null;
     }
     return router.registerRoute(pattern, handler, routeOptions);
@@ -303,7 +159,6 @@ export class BaseSubsystem {
   unregisterRoute(pattern) {
     const router = this.find(FACET_KINDS.ROUTER);
     if (!router?.unregisterRoute) {
-      //throw new Error(`${this.name}: missing router facet`);
       return null; 
     }
     return router.unregisterRoute(pattern);

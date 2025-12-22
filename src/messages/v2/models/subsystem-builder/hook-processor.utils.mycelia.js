@@ -4,7 +4,7 @@
  * Handles hook ordering, execution, and facet creation during subsystem verification.
  */
 
-import { Facet } from '../facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 
 /**
  * Order hooks based on their dependencies using topological sort.

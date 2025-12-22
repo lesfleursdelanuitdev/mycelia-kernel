@@ -12,7 +12,7 @@
  * @param {BaseSubsystem} subsystem - Subsystem instance
  * @returns {Facet} Facet object with Prisma Client and helper methods
  */
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 import { getDebugFlag } from '../../utils/debug-flag.utils.mycelia.js';
 

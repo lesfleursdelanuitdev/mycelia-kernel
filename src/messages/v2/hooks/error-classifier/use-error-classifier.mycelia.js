@@ -17,7 +17,7 @@
  * });
  */
 import { createHook } from '../create-hook.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { ErrorRecord, ERROR_TYPES, ERROR_SEVERITY } from '../../models/kernel-subsystem/error-manager-subsystem/error-record.mycelia.js';
 
 export const useErrorClassifier = createHook({

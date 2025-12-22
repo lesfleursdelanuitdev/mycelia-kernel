@@ -1,40 +1,29 @@
-import { describe, it, expect, vi } from 'vitest';
-
-const hoisted = vi.hoisted(() => {
-  class BaseSubsystemMock {
-    constructor(name, options = {}) {
-      this.name = name;
-      this.options = options;
-      this.use = vi.fn().mockReturnThis();
-    }
-  }
-
-  return {
-    BaseSubsystemMock,
-    useListeners: vi.fn(),
-  };
-});
-
-vi.mock('../../base-subsystem/base.subsystem.mycelia.js', () => ({
-  BaseSubsystem: hoisted.BaseSubsystemMock,
-}));
-
-vi.mock('../../../hooks/listeners/use-listeners.mycelia.js', () => ({
-  useListeners: hoisted.useListeners,
-}));
-
+import { describe, it, expect } from 'vitest';
 import { StandalonePluginSystem } from '../standalone-plugin-system.mycelia.js';
 
 describe('StandalonePluginSystem', () => {
-  it('installs useListeners hook and overrides message APIs', async () => {
+  it('provides no-op message APIs', async () => {
     const system = new StandalonePluginSystem('plugins');
-    expect(system.use).not.toHaveBeenCalledWith(hoisted.useListeners);
-    await expect(system.accept({}, {})).resolves.toBeUndefined();
+    
+    // Plugin system's accept returns true (no-op)
+    await expect(system.accept({}, {})).resolves.toBe(true);
+    
+    // Plugin system's process returns null (no-op)
     await expect(system.process()).resolves.toBeNull();
+    
+    // Plugin system's pause/resume return this (no-op)
     expect(system.pause()).toBe(system);
     expect(system.resume()).toBe(system);
-    expect(system.registerRoute('x', () => {})).toBe(false);
-    expect(system.unregisterRoute('x')).toBe(false);
+    
+    // Plugin system's registerRoute/unregisterRoute return null if router not available
+    expect(system.registerRoute('x', () => {})).toBeNull();
+    expect(system.unregisterRoute('x')).toBeNull();
+  });
+  
+  it('can be built and used', async () => {
+    const system = new StandalonePluginSystem('test-system');
+    await system.build();
+    expect(system.isBuilt).toBe(true);
   });
 });
 

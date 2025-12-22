@@ -13,7 +13,7 @@
 
 import { MessageSystem } from '../models/message-system/message-system.v2.mycelia.js';
 import { BaseSubsystem } from '../models/base-subsystem/base.subsystem.mycelia.js';
-import { DependencyGraphCache } from '../models/subsystem-builder/dependency-graph-cache.mycelia.js';
+import { DependencyGraphCache } from 'mycelia-kernel-plugin/builder';
 import { createCanonicalDefaultHooks } from '../models/defaults/default-hooks.mycelia.js';
 import { useRouter } from '../hooks/router/use-router.mycelia.js';
 import { useQueue } from '../hooks/queue/use-queue.mycelia.js';

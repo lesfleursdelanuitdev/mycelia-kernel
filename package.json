@@ -69,7 +69,8 @@
   "dependencies": {
     "better-sqlite3": "^12.5.0",
     "commander": "^12.1.0",
-    "glob": "^11.0.0"
+    "glob": "^11.0.0",
+    "mycelia-kernel-plugin": "^1.4.1"
   },
   "peerDependencies": {
     "@hono/node-server": "^1.19.0",
@@ -101,12 +102,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "autoprefixer": "^10.4.22",
     "eslint": "^9.36.0",
     "globals": "^16.4.0",
+    "tailwindcss": "^4.1.17",
     "vitest": "^2.1.5"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
-

@@ -1,7 +1,7 @@
 // src/hooks/queries/use-queries.mycelia.js
 
 import { createHook } from '../create-hook.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { QueryHandlerManager } from './QueryHandlerManager.mycelia.js';
 
 export const useQueries = createHook({

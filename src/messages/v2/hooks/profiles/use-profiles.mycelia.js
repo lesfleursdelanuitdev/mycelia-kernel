@@ -11,7 +11,7 @@
  * @returns {Facet} Facet object with profile management methods
  */
 import { SecurityProfile } from '../../models/security/security-profile.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 
 export const useProfiles = createHook({

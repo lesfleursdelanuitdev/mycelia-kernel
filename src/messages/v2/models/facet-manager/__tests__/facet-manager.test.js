@@ -1,16 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
-  const beginTransaction = vi.fn();
-  const commit = vi.fn();
-  const rollback = vi.fn().mockResolvedValue(undefined);
   return {
-    FacetManagerTransaction: vi.fn().mockImplementation(() => ({
-      beginTransaction,
-      commit,
-      rollback,
-      trackAddition: vi.fn(),
-    })),
     logger: {
       log: vi.fn(),
       error: vi.fn(),
@@ -18,9 +9,8 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock('../facet-manager-transaction.mycelia.js', () => ({
-  FacetManagerTransaction: hoisted.FacetManagerTransaction,
-}));
+// Note: FacetManager is now from the plugin system, which imports FacetManagerTransaction internally
+// We can't easily mock internal imports, so we'll test behavior instead of implementation details
 
 vi.mock('../../utils/logger.utils.mycelia.js', () => ({
   createSubsystemLogger: () => hoisted.logger,
@@ -86,13 +76,17 @@ describe('FacetManager', () => {
     vi.spyOn(router, 'getDependencies').mockReturnValue([]);
     vi.spyOn(processor, 'getDependencies').mockReturnValue(['router']);
 
+    // Test that addMany works correctly with dependencies
     await manager.addMany(['router', 'processor'], { router, processor }, { init: true, attach: true });
-    expect(hoisted.FacetManagerTransaction).toHaveBeenCalled();
+    expect(manager.find('router')).toBe(router);
+    expect(manager.find('processor')).toBe(processor);
+    
+    // Test that rollback happens on failure
     const failing = createFacet('queue');
     failing.init.mockRejectedValue(new Error('fail'));
     await expect(manager.addMany(['queue'], { queue: failing }, { init: true })).rejects.toThrow();
-    const lastTxn = hoisted.FacetManagerTransaction.mock.results.at(-1).value;
-    expect(lastTxn.rollback).toHaveBeenCalled();
+    // After failure, the facet should not be added
+    expect(manager.find('queue')).toBeUndefined();
   });
 
   it('addMany sets orderIndex for each facet based on position in orderedKinds', async () => {

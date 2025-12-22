@@ -18,7 +18,7 @@
  * - subsystem.identity.sendProtected(message, options) exists
  * - subsystem has a 'messages' facet for message creation
  */
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 import { createSubsystemLogger } from '../../utils/logger.utils.mycelia.js';
 

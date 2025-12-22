@@ -10,7 +10,7 @@
  * @returns {Facet} Facet object with principal management methods
  */
 import { PrincipalRegistry } from '../../models/security/principal-registry.mycelia.js';
-import { Facet } from '../../models/facet-manager/facet.mycelia.js';
+import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 
 export const usePrincipals = createHook({
