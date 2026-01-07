@@ -45,10 +45,12 @@ export const useFastifyServer = createHook({
       throw new Error('useFastifyServer requires messageSystemRouter facet on MessageSystem');
     }
     
-    // Server state
+    // Server state - use closure variables for mutable state
     const fastifyRef = { instance: null }; // Use object reference for loadFastify utility
     let serverAddress = null;
     let serverPort = null;
+    let serverInstance = null; // Store server in closure
+    let isRunning = false; // Store running state in closure
     
     // Wrapper for loadFastify that uses our fastifyRef
     const loadFastifyApp = async () => {
@@ -61,8 +63,8 @@ export const useFastifyServer = createHook({
     };
     
     // Create a placeholder server object for contract validation
-    // Will be replaced with actual Fastify instance when start() is called
     const placeholderServer = { _placeholder: true };
+    serverInstance = placeholderServer; // Initialize with placeholder
     
     return new Facet('server', {
       contract: 'server',
@@ -70,8 +72,9 @@ export const useFastifyServer = createHook({
       source: import.meta.url
     })
     .add({
-      _server: placeholderServer,
-      _isRunning: false,
+      // Use getters to access closure variables
+      get _server() { return serverInstance; },
+      get _isRunning() { return isRunning; },
       
       /**
        * Start the HTTP server
@@ -82,20 +85,20 @@ export const useFastifyServer = createHook({
        * @returns {Promise<void>}
        */
       async start(options = {}) {
-        if (this._isRunning) {
+        if (isRunning) {
           throw new Error('Server is already running');
         }
         
         // Load Fastify if not already loaded
         const server = await loadFastifyApp();
-        this._server = server; // Replace placeholder with actual instance
+        serverInstance = server; // Update closure variable
         
         const port = options.port ?? config.port ?? 3000;
         const host = options.host ?? config.host ?? '0.0.0.0';
         
         try {
           await server.listen({ port, host });
-          this._isRunning = true;
+          isRunning = true; // Update closure variable
           serverAddress = `http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`;
           serverPort = port;
           
@@ -117,7 +120,7 @@ export const useFastifyServer = createHook({
        * @returns {Promise<void>}
        */
       async stop() {
-        if (!this._isRunning) {
+        if (!isRunning) {
           return;
         }
         
@@ -132,8 +135,8 @@ export const useFastifyServer = createHook({
           fastifyRef.instance = null;
         }
         
-        this._isRunning = false;
-        this._server = placeholderServer;
+        isRunning = false; // Update closure variable
+        serverInstance = placeholderServer; // Reset to placeholder
         serverAddress = null;
         serverPort = null;
         
@@ -147,7 +150,7 @@ export const useFastifyServer = createHook({
        * @returns {boolean}
        */
       isRunning() {
-        return this._isRunning;
+        return isRunning;
       },
       
       /**

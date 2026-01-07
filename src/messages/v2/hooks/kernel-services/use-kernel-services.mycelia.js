@@ -94,6 +94,11 @@ export const useKernelServices = createHook({
       messageSystem = subsystem.ctx?.ms;
     }
     
+    // If still not found, check ctx.ms directly (from hook context)
+    if (!messageSystem) {
+      messageSystem = ctx.ms;
+    }
+    
     // If still not found, try to get from root (MessageSystem is root and is its own ms)
     if (!messageSystem) {
       const root = subsystem.getRoot?.();

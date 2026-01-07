@@ -66,7 +66,9 @@ describe('useKernelServices', () => {
 
   it('installs kernel child subsystems with proper configs', () => {
     const { subsystem, hierarchy } = createSubsystem();
+    const messageSystem = subsystem.ms; // Get messageSystem reference
     const ctx = {
+      ms: messageSystem, // Provide messageSystem via ctx.ms
       config: {
         kernelServices: {
           services: {
@@ -78,6 +80,9 @@ describe('useKernelServices', () => {
       },
     };
     const api = { name: 'kernel', __facets: {} };
+    
+    // Also set messageSystem on subsystem for hook compatibility
+    subsystem.messageSystem = messageSystem;
 
     useKernelServices(ctx, api, subsystem);
 

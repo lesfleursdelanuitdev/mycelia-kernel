@@ -61,19 +61,45 @@ describe('WebSocketSubsystem Integration', () => {
   });
 
   afterEach(async () => {
-    // Stop WebSocket server
-    const websocket = websocketSubsystem?.find('websocket');
-    if (websocket && websocket.isRunning()) {
-      await websocket.stop();
+    // Stop WebSocket server with proper cleanup
+    if (websocketSubsystem) {
+      const websocket = websocketSubsystem.find('websocket');
+      if (websocket) {
+        try {
+          if (websocket.isRunning()) {
+            await websocket.stop();
+          }
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      }
+      try {
+        await websocketSubsystem.dispose();
+      } catch (error) {
+        // Ignore cleanup errors
+      }
     }
 
-    // Cleanup
+    // Cleanup subsystems
     if (testSubsystem) {
-      await testSubsystem.dispose();
+      try {
+        await testSubsystem.dispose();
+      } catch (error) {
+        // Ignore cleanup errors
+      }
     }
+    
+    // Cleanup message system
     if (messageSystem) {
-      await messageSystem.dispose();
+      try {
+        await messageSystem.dispose();
+      } catch (error) {
+        // Ignore cleanup errors
+      }
     }
+    
+    // Wait longer for ports to be released and ensure cleanup completes
+    await new Promise(resolve => setTimeout(resolve, 200));
   });
 
   it('starts and stops WebSocket server', async () => {
@@ -106,9 +132,20 @@ describe('WebSocketSubsystem Integration', () => {
     // Connect client
     const client = new WebSocket(`ws://localhost:${WEBSOCKET_TEST_PORT}/ws`);
     
-    await new Promise((resolve) => {
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        client.close();
+        reject(new Error('Connection timeout'));
+      }, 5000);
+      
       client.on('open', () => {
+        clearTimeout(timeout);
         resolve();
+      });
+      
+      client.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
       });
     });
 
@@ -118,8 +155,11 @@ describe('WebSocketSubsystem Integration', () => {
     expect(connectionReceived).toBe(true);
     expect(websocket.getConnectionCount()).toBe(1);
 
-    client.close();
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Clean up client connection
+    if (client.readyState === WebSocket.OPEN) {
+      client.close();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   });
 
   it('routes WebSocket messages to Mycelia handlers', async () => {
@@ -180,7 +220,10 @@ describe('WebSocketSubsystem Integration', () => {
     expect(response.data.echo).toBe('Hello WebSocket!');
     expect(response.correlationId).toBe('test-correlation-1');
 
-    client.close();
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Clean up client connection
+    if (client.readyState === WebSocket.OPEN || client.readyState === WebSocket.CONNECTING) {
+      client.close();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   });
 });

@@ -45,11 +45,13 @@ export const useHonoServer = createHook({
       throw new Error('useHonoServer requires messageSystemRouter facet on MessageSystem');
     }
     
-    // Server state
+    // Server state - use closure variables for mutable state
     const honoAppRef = { app: null }; // Use object reference for loadHono utility
     let httpServer = null;
     let serverAddress = null;
     let serverPort = null;
+    let serverInstance = null; // Store server in closure
+    let isRunning = false; // Store running state in closure
     
     // Wrapper for loadHono that uses our honoAppRef
     const loadHonoApp = async () => {
@@ -62,8 +64,8 @@ export const useHonoServer = createHook({
     };
     
     // Create a placeholder server object for contract validation
-    // Will be replaced with actual Hono app when start() is called
     const placeholderServer = { _placeholder: true };
+    serverInstance = placeholderServer; // Initialize with placeholder
     
     return new Facet('server', {
       contract: 'server',
@@ -71,8 +73,9 @@ export const useHonoServer = createHook({
       source: import.meta.url
     })
     .add({
-      _server: placeholderServer,
-      _isRunning: false,
+      // Use getters to access closure variables
+      get _server() { return serverInstance; },
+      get _isRunning() { return isRunning; },
       
       /**
        * Start the HTTP server
@@ -83,13 +86,13 @@ export const useHonoServer = createHook({
        * @returns {Promise<void>}
        */
       async start(options = {}) {
-        if (this._isRunning) {
+        if (isRunning) {
           throw new Error('Server is already running');
         }
         
         // Load Hono if not already loaded
         const app = await loadHonoApp();
-        this._server = app; // Replace placeholder with actual instance
+        serverInstance = app; // Update closure variable
         
         const port = options.port ?? config.port ?? 3000;
         const host = options.host ?? config.host ?? '0.0.0.0';
@@ -109,7 +112,7 @@ export const useHonoServer = createHook({
               port,
               hostname: bindHost,
             }, (info) => {
-              this._isRunning = true;
+              isRunning = true; // Update closure variable
               serverAddress = `http://${displayHost}:${info.port}`;
               serverPort = info.port;
               
@@ -140,13 +143,13 @@ export const useHonoServer = createHook({
        * @returns {Promise<void>}
        */
       async stop() {
-        if (!this._isRunning) {
+        if (!isRunning) {
           return;
         }
         
         return new Promise((resolve, reject) => {
           if (!httpServer) {
-            this._isRunning = false;
+            isRunning = false; // Update closure variable
             resolve();
             return;
           }
@@ -157,10 +160,11 @@ export const useHonoServer = createHook({
               logger.error('Failed to stop server:', error);
               reject(error);
             } else {
-              this._isRunning = false;
+              isRunning = false; // Update closure variable
               httpServer = null;
               // Note: We keep honoApp so routes remain registered if server is restarted
               // If you want to clear routes, you'd need to recreate the Hono app
+              serverInstance = placeholderServer; // Reset to placeholder
               serverAddress = null;
               serverPort = null;
               
@@ -179,7 +183,7 @@ export const useHonoServer = createHook({
        * @returns {boolean}
        */
       isRunning() {
-        return this._isRunning;
+        return isRunning;
       },
       
       /**

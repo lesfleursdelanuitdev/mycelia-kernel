@@ -46,11 +46,13 @@ export const useWebSocketServer = createHook({
       throw new Error('useWebSocketServer requires messageSystemRouter facet on MessageSystem');
     }
     
-    // Server state
+    // Server state - use closure variables for mutable state
     const wsRef = { instance: null };
     const connections = new Map(); // connectionId -> WebSocketConnection
     let serverAddress = null;
     let serverPort = null;
+    let serverInstance = null; // Store server in closure
+    let isRunning = false; // Store running state in closure
     
     // Connection lifecycle handlers
     const connectionHandlers = [];
@@ -72,6 +74,7 @@ export const useWebSocketServer = createHook({
     
     // Placeholder server for contract validation
     const placeholderServer = { _placeholder: true };
+    serverInstance = placeholderServer; // Initialize with placeholder
     
     return new Facet('websocket', {
       contract: 'websocket',
@@ -79,9 +82,10 @@ export const useWebSocketServer = createHook({
       source: import.meta.url
     })
     .add({
-      _server: placeholderServer,
-      _isRunning: false,
-      _connections: connections,
+      // Use getters to access closure variables
+      get _server() { return serverInstance; },
+      get _isRunning() { return isRunning; },
+      get _connections() { return connections; },
       
       /**
        * Start the WebSocket server
@@ -93,7 +97,7 @@ export const useWebSocketServer = createHook({
        * @returns {Promise<void>}
        */
       async start(options = {}) {
-        if (this._isRunning) {
+        if (isRunning) {
           throw new Error('WebSocket server is already running');
         }
         
@@ -106,7 +110,7 @@ export const useWebSocketServer = createHook({
         };
         
         const wss = await loadWebSocketServer(serverConfig, wsRef);
-        this._server = wss;
+        serverInstance = wss; // Update closure variable
         
         // Handle new connections
         wss.on('connection', async (socket, req) => {
@@ -234,7 +238,7 @@ export const useWebSocketServer = createHook({
           wss.on('error', reject);
         });
         
-        this._isRunning = true;
+        isRunning = true; // Update closure variable
         
         if (debug) {
           logger.log(`WebSocket server started on ${serverConfig.host}:${serverPort}${serverConfig.path}`);
@@ -246,7 +250,7 @@ export const useWebSocketServer = createHook({
        * @returns {Promise<void>}
        */
       async stop() {
-        if (!this._isRunning) {
+        if (!isRunning) {
           return;
         }
         
@@ -262,16 +266,16 @@ export const useWebSocketServer = createHook({
         connections.clear();
         
         // Close server
-        if (this._server && typeof this._server.close === 'function') {
+        if (serverInstance && typeof serverInstance.close === 'function') {
           await new Promise((resolve) => {
-            this._server.close(() => {
+            serverInstance.close(() => {
               resolve();
             });
           });
         }
         
-        this._isRunning = false;
-        this._server = placeholderServer;
+        isRunning = false; // Update closure variable
+        serverInstance = placeholderServer; // Reset to placeholder
         serverAddress = null;
         serverPort = null;
         
@@ -285,7 +289,7 @@ export const useWebSocketServer = createHook({
        * @returns {boolean}
        */
       isRunning() {
-        return this._isRunning;
+        return isRunning;
       },
       
       /**
