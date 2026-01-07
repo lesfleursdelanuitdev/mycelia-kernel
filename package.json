@@ -1,6 +1,6 @@
 {
   "name": "mycelia-kernel",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Production-ready message-driven architecture framework with composable hooks, built-in security, and multi-backend support",
   "license": "MIT",
   "type": "module",
