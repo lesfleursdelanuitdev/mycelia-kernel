@@ -5,6 +5,20 @@ All notable changes to Mycelia Kernel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.7] - 2025-01-27
+
+### Fixed
+- Fixed server facet immutability issues in Fastify, Express, Hono, and WebSocket hooks
+  - Server hooks now use closure variables instead of direct property assignment
+  - Resolves "Cannot assign to read only property '_server'" errors
+- Fixed use-kernel-services test mock structure to provide proper messageSystem reference
+- Improved WebSocket test cleanup procedures to prevent port conflicts
+- All 711 tests now passing (previously 26 failures)
+
+### Changed
+- Server facet state management now uses getters to access closure variables
+- Improved test reliability with better cleanup procedures
+
 ## [1.1.0] - 2025-12-05
 
 ### ⚡ Performance Improvements
