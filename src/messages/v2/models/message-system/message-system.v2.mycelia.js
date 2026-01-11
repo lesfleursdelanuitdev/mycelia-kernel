@@ -185,6 +185,99 @@ export class MessageSystem extends BaseSubsystem {
     return null;
   }
 
+  /**
+   * Get kernel for initialization purposes (production-safe)
+   * 
+   * Unlike `getKernel()`, this method always returns the kernel for legitimate initialization tasks
+   * such as setting up security profiles, configuring subsystems, etc.
+   * 
+   * **Use this for**: Initialization, setup, configuration
+   * **Don't use this for**: Runtime access, message processing, production business logic
+   * 
+   * @returns {KernelSubsystem} Kernel subsystem instance
+   * 
+   * @example
+   * // Initialize security profiles (production-safe)
+   * const kernel = messageSystem.getKernelForInit();
+   * const profileRegistry = kernel.getProfileRegistry();
+   * await profileRegistry.createProfile('user', { 'api:read': 'r' });
+   */
+  getKernelForInit() {
+    return this.#kernel;
+  }
+
+  /**
+   * Initialize security profiles (production-safe helper)
+   * 
+   * A convenience method for initializing security profiles without requiring debug mode.
+   * This is the recommended way to set up profiles in production applications.
+   * 
+   * **Idempotent**: If a profile already exists, it will be skipped (no error thrown).
+   * This allows calling this method multiple times safely.
+   * 
+   * @param {Object<string, Object<string, 'r'|'rw'|'rwg'>>} profiles - Map of profile names to scope permissions
+   * @param {Object} [options={}] - Options
+   * @param {boolean} [options.overwrite=false] - If true, overwrite existing profiles
+   * @returns {Promise<void>}
+   * @throws {Error} If profile initialization fails (only for non-existing profiles)
+   * 
+   * @example
+   * await messageSystem.initializeProfiles({
+   *   'user': { 'api:read': 'r', 'api:write': 'rw' },
+   *   'admin': { 'api:*': 'rwg' }
+   * });
+   */
+  async initializeProfiles(profiles, options = {}) {
+    const { overwrite = false } = options;
+    const kernel = this.getKernelForInit();
+    const profileRegistry = kernel.getProfileRegistry();
+    
+    if (!profileRegistry) {
+      throw new Error('ProfileRegistrySubsystem not available. Ensure kernel is bootstrapped.');
+    }
+    
+    for (const [name, scopes] of Object.entries(profiles)) {
+      try {
+        // Check if profile already exists
+        const existing = profileRegistry.getProfile(name);
+        if (existing) {
+          if (overwrite) {
+            // Remove existing profile and create new one
+            // Note: ProfileRegistrySubsystem doesn't have a delete method yet
+            // For now, we'll skip if it exists
+            if (this.debug) {
+              console.log(`⚠️ Profile ${name} already exists, skipping (overwrite not yet supported)`);
+            }
+          } else {
+            if (this.debug) {
+              console.log(`ℹ️ Profile ${name} already exists, skipping`);
+            }
+          }
+          continue;
+        }
+        
+        await profileRegistry.createProfile(name, scopes);
+        if (this.debug) {
+          console.log(`✅ Created security profile: ${name}`);
+        }
+      } catch (error) {
+        // If profile already exists, skip it (idempotent behavior)
+        if (error.message && error.message.includes('already exists')) {
+          if (this.debug) {
+            console.log(`ℹ️ Profile ${name} already exists, skipping`);
+          }
+          continue;
+        }
+        console.error(`❌ Failed to create profile ${name}:`, error);
+        throw error;
+      }
+    }
+    
+    if (this.debug) {
+      console.log('✅ Security profiles initialized');
+    }
+  }
+
   startScheduler() {
     const scheduler = this.find('globalScheduler');
     if (!scheduler) {

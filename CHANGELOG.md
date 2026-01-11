@@ -5,6 +5,76 @@ All notable changes to Mycelia Kernel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2025-01-11
+
+### Added
+- **Production-Safe Kernel Access** - Added `getKernelForInit()` method for production-safe initialization
+  - Always returns kernel instance (unlike `getKernel()` which requires debug mode)
+  - Intended for initialization, setup, and configuration tasks
+  - Enables profile initialization without debug mode
+- **Profile Initialization Helper** - Added `initializeProfiles()` method to MessageSystem
+  - Production-safe convenience method for initializing security profiles
+  - Works in both production and development environments
+  - Eliminates need for debug mode just to set up profiles
+- **Enhanced Exports** - Added more classes to main package exports:
+  - `KernelSubsystem` - Kernel subsystem class
+  - `ProfileRegistrySubsystem` - Profile registry subsystem
+  - `AccessControlSubsystem` - Access control subsystem
+  - `SecurityProfile` - Security profile model
+  - `Principal` - Principal model
+- **Production Patterns Documentation** - Added comprehensive guide for production vs development patterns
+  - When to use debug mode vs production-safe methods
+  - Best practices for initialization
+  - Migration guide from debug mode patterns
+
+### Changed
+- Improved developer experience with better exports and production-safe initialization
+- Enhanced documentation for production use cases
+
+### Migration Guide
+If you're using debug mode for profile initialization, you can now use production-safe methods:
+
+```javascript
+// Before (requires debug mode)
+const messageSystem = new MessageSystem('app', { debug: true });
+await messageSystem.bootstrap();
+const kernel = messageSystem.getKernel();
+const profileRegistry = kernel.getProfileRegistry();
+await profileRegistry.createProfile('user', {...});
+
+// After (production-safe)
+const messageSystem = new MessageSystem('app');
+await messageSystem.bootstrap();
+await messageSystem.initializeProfiles({
+  'user': {...}
+});
+```
+
+## [1.5.0] - 2025-01-11
+
+### Added
+- **Exported MessageSystem** - Added `MessageSystem` class to main package exports
+  - Enables direct import: `import { MessageSystem } from 'mycelia-kernel'`
+  - Previously required deep path imports or subpath exports
+- **Exported Message** - Added `Message` class to main package exports
+  - Enables direct import: `import { Message } from 'mycelia-kernel'`
+  - Simplifies message creation in consuming applications
+
+### Changed
+- Improved package exports for better developer experience
+- All core classes now available from main package entry point
+
+### Migration Guide
+If you were using deep imports, you can now use the main export:
+```javascript
+// Before
+import { MessageSystem } from 'mycelia-kernel/src/messages/v2/models/message-system/message-system.v2.mycelia.js';
+import { Message } from 'mycelia-kernel/src/messages/v2/models/message/message.mycelia.js';
+
+// After
+import { MessageSystem, Message } from 'mycelia-kernel';
+```
+
 ## [1.4.7] - 2025-01-27
 
 ### Fixed

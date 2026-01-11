@@ -7,6 +7,17 @@
 // Core classes
 export { BaseSubsystem } from './models/base-subsystem/base.subsystem.mycelia.js';
 export { StandalonePluginSystem } from './models/standalone-plugin-system/standalone-plugin-system.mycelia.js';
+export { MessageSystem } from './models/message-system/message-system.v2.mycelia.js';
+export { Message } from './models/message/message.mycelia.js';
+
+// Kernel subsystems
+export { KernelSubsystem } from './models/kernel-subsystem/kernel.subsystem.mycelia.js';
+export { ProfileRegistrySubsystem } from './models/kernel-subsystem/profile-registry-subsystem/profile-registry.subsystem.mycelia.js';
+export { AccessControlSubsystem } from './models/kernel-subsystem/access-control-subsystem/access-control.subsystem.mycelia.js';
+
+// Security models
+export { SecurityProfile } from './models/security/security-profile.mycelia.js';
+export { Principal } from './models/security/principal.mycelia.js';
 
 // Hooks
 export { useStatistics } from './hooks/statistics/use-statistics.mycelia.js';
