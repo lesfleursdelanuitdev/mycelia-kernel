@@ -9,9 +9,11 @@ import { generateFacetContract } from '../generators/facet-contract-generator.js
 import { generateRoutesUI } from '../generators/routes-ui-generator.js';
 import { generateCommandsUI } from '../generators/commands-ui-generator.js';
 import { generateQueriesUI } from '../generators/queries-ui-generator.js';
+import { generateTestUtilities } from '../generators/test-utilities-generator.js';
+import { generateTest } from '../generators/test-generator.js';
 
 export async function generateCommand(type, name, options) {
-  if (!name && type !== 'routes-ui' && type !== 'commands-ui' && type !== 'queries-ui') {
+  if (!name && type !== 'routes-ui' && type !== 'commands-ui' && type !== 'queries-ui' && type !== 'test-utilities') {
     console.error(`Error: Name is required for generating ${type}`);
     process.exit(1);
   }
@@ -44,9 +46,15 @@ export async function generateCommand(type, name, options) {
       case 'queries-ui':
         await generateQueriesUI(options);
         break;
+      case 'test-utilities':
+        await generateTestUtilities(options);
+        break;
+      case 'test':
+        await generateTest(name, options);
+        break;
       default:
         console.error(`Error: Unknown type "${type}"`);
-        console.error('Valid types: subsystem, hook, facet-contract, routes-ui, commands-ui, queries-ui');
+        console.error('Valid types: subsystem, hook, facet-contract, routes-ui, commands-ui, queries-ui, test-utilities, test');
         process.exit(1);
     }
   } catch (error) {

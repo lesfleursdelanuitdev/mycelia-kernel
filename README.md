@@ -25,6 +25,31 @@ Mycelia Kernel is a **production-ready framework** for building message-driven s
 
 ## ⚡ Quick Start
 
+**🚀 Recommended: Use the CLI for the best developer experience!**
+
+```bash
+# Install
+npm install mycelia-kernel
+
+# Initialize a new project (recommended)
+npx mycelia-kernel init --name my-app
+
+# Generate a subsystem with proper structure
+npx mycelia-kernel generate subsystem UserService --use-defaults-async
+
+# Generate test utilities and test files
+npx mycelia-kernel generate test-utilities
+npx mycelia-kernel generate test UserService
+
+# Run health checks
+npx mycelia-kernel doctor
+
+# Learn terminology
+npx mycelia-kernel glossary subsystem
+```
+
+**Or use manually:**
+
 ```bash
 # Install
 npm install mycelia-kernel
@@ -55,10 +80,16 @@ subsystem.router.registerRoute('users/{id}', async (message, params) => {
   return { user: { id: params.id } };
 });
 
-// Send messages
+// ✅ CORRECT: Send messages from a subsystem using identity.sendProtected()
+// This ensures proper security, caller authentication, and access control
 const message = new Message('api://users/123', {});
-const result = await messageSystem.send(message);
+const result = await subsystem.identity.sendProtected(message);
+
+// ❌ INCORRECT: Don't use messageSystem.send() from within subsystems
+// const result = await messageSystem.send(message); // Wrong!
 ```
+
+> **💡 Tip:** The CLI provides code generation, health checks, and a comprehensive glossary. See [CLI Documentation](./cli/README.md) for details.
 
 ---
 
@@ -69,6 +100,25 @@ const result = await messageSystem.send(message);
 - Loose coupling between components
 - Async-first design
 - Built for distributed systems
+
+**Sending Messages from Subsystems:**
+```javascript
+// ✅ CORRECT: Use subsystem.identity.sendProtected()
+// This ensures proper security, caller authentication, and access control
+const message = new Message('other-subsystem://action', { data: 'value' });
+const result = await subsystem.identity.sendProtected(message);
+
+// ❌ INCORRECT: Don't use messageSystem.send() from within subsystems
+// This bypasses security and caller authentication
+// const result = await messageSystem.send(message); // Wrong!
+```
+
+**Why use `identity.sendProtected()`?**
+- ✅ Automatic caller authentication (uses subsystem's PKR)
+- ✅ Prevents message spoofing
+- ✅ Enforces access control and permissions
+- ✅ Proper security guarantees
+- ✅ Works with all communication types (routes, commands, queries, requests)
 
 ### **Hook-Based Composition**
 ```javascript
@@ -114,11 +164,29 @@ subsystem.use(useHonoServer);     // Hono
 
 ---
 
+## 🛠️ CLI Tools
+
+**The Mycelia Kernel CLI makes development easier:**
+
+- **`mycelia-kernel init`** - Initialize new projects with proper structure
+- **`mycelia-kernel generate subsystem`** - Generate subsystems with correct patterns
+- **`mycelia-kernel generate hook`** - Generate custom hooks
+- **`mycelia-kernel generate test-utilities`** - Generate testing utilities (mocks, helpers)
+- **`mycelia-kernel generate test <subsystem>`** - Generate test file scaffolding
+- **`mycelia-kernel doctor`** - Run health checks (missing handlers, dependencies, etc.)
+- **`mycelia-kernel glossary`** - Learn Mycelia terminology (30+ terms)
+- **`mycelia-kernel routes/commands/queries`** - Discover subsystem capabilities
+
+See [**CLI Documentation**](./cli/README.md) for complete reference.
+
+---
+
 ## 📚 Documentation
 
 Extensive documentation with **151+ markdown files**:
 
-- [**Documentation Index**](./docs/README.md) - Start here for organized docs
+- [**CLI Documentation**](./cli/README.md) - **Start here!** Code generation and project management
+- [**Documentation Index**](./docs/README.md) - Organized docs
 - [**Design Patterns**](./docs/design/DESIGN-PATTERNS.md) - 20+ patterns explained
 - [**Architecture Overview**](./docs/architecture/PLUGIN-SYSTEM-ANALYSIS.md) - Hook-based plugin system
 - [**Security Model**](./docs/design/SECURITY-INTEGRATION-SOLUTION.md) - PKR identity & RWS permissions

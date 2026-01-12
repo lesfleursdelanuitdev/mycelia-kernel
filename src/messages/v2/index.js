@@ -14,10 +14,16 @@ export { Message } from './models/message/message.mycelia.js';
 export { KernelSubsystem } from './models/kernel-subsystem/kernel.subsystem.mycelia.js';
 export { ProfileRegistrySubsystem } from './models/kernel-subsystem/profile-registry-subsystem/profile-registry.subsystem.mycelia.js';
 export { AccessControlSubsystem } from './models/kernel-subsystem/access-control-subsystem/access-control.subsystem.mycelia.js';
+export { ErrorManagerSubsystem } from './models/kernel-subsystem/error-manager-subsystem/error-manager.subsystem.mycelia.js';
+export { ChannelManagerSubsystem } from './models/kernel-subsystem/channel-manager-subsystem/channel-manager.subsystem.mycelia.js';
+export { ResponseManagerSubsystem } from './models/kernel-subsystem/response-manager-subsystem/response-manager.subsystem.mycelia.js';
 
 // Security models
 export { SecurityProfile } from './models/security/security-profile.mycelia.js';
 export { Principal } from './models/security/principal.mycelia.js';
+export { PKR } from './models/security/public-key-record.mycelia.js';
+export { ReaderWriterSet } from './models/security/reader-writer-set.mycelia.js';
+export { PrincipalRegistry } from './models/security/principal-registry.mycelia.js';
 
 // Hooks
 export { useStatistics } from './hooks/statistics/use-statistics.mycelia.js';
@@ -37,6 +43,16 @@ export { useHierarchy } from './hooks/hierarchy/use-hierarchy.mycelia.js';
 export { useRequests } from './hooks/requests/use-requests.mycelia.js';
 export { useQueries } from './hooks/queries/use-queries.mycelia.js';
 export { useSynchronous } from './hooks/synchronous/use-synchronous.mycelia.js';
+export { useExtractHandlerResult } from './hooks/extract-handler-result/use-extract-handler-result.mycelia.js';
+export { useCommands } from './hooks/commands/use-commands.mycelia.js';
+export { useKernelServices } from './hooks/kernel-services/use-kernel-services.mycelia.js';
+export { useProfiles } from './hooks/profiles/use-profiles.mycelia.js';
+export { usePrincipals } from './hooks/principals/use-principals.mycelia.js';
+export { useErrorClassifier } from './hooks/error-classifier/use-error-classifier.mycelia.js';
+export { useBoundedErrorStore } from './hooks/bounded-error-store/use-bounded-error-store.mycelia.js';
+export { useDBTransactions } from './hooks/db/use-db-transactions.mycelia.js';
+export { useDBMigrations } from './hooks/db/use-db-migrations.mycelia.js';
+export { useDBQueryBuilder } from './hooks/db/use-db-query-builder.mycelia.js';
 export { ChildSubsystemRegistry } from './hooks/hierarchy/child-subsystem-registry.mycelia.js';
 export { DefaultHooks, createCanonicalDefaultHooks, createSynchronousDefaultHooks, FACET_KINDS } from './models/defaults/default-hooks.mycelia.js';
 export { useHealthCheck } from './hooks/health/use-health-check.mycelia.js';
@@ -48,6 +64,8 @@ export { usePrismaStorage } from './hooks/storage/prisma/use-prisma-storage.myce
 export { usePrisma } from './hooks/prisma/use-prisma.mycelia.js';
 export { DBSubsystem } from './models/subsystem/db/db.subsystem.mycelia.js';
 export { useDBStorage } from './hooks/db/use-db-storage.mycelia.js';
+export { ServerSubsystem } from './models/server-subsystem/server.subsystem.mycelia.js';
+export { WebSocketSubsystem } from './models/websocket-subsystem/websocket.subsystem.mycelia.js';
 export { AuthSubsystem } from './models/subsystem/auth/auth.subsystem.mycelia.js';
 export { useAuthStorage } from './hooks/auth/use-auth-storage.mycelia.js';
 export { usePrismaAuthStorage } from './hooks/auth/use-prisma-auth-storage.mycelia.js';
@@ -58,6 +76,8 @@ export { useAuthStrategies } from './hooks/auth/use-auth-strategies.mycelia.js';
 export { useExpressServer } from './hooks/server/express/use-express-server.mycelia.js';
 export { useFastifyServer } from './hooks/server/fastify/use-fastify-server.mycelia.js';
 export { useHonoServer } from './hooks/server/hono/use-hono-server.mycelia.js';
+export { useServerRoutes } from './hooks/server-routes/use-server-routes.mycelia.js';
+export { useWebSocketServer } from './hooks/websocket/ws/use-websocket-server.mycelia.js';
 
 // Utilities
 export { collectChildren, buildChildren, disposeChildren } from './models/base-subsystem/base-subsystem.utils.mycelia.js';
@@ -87,7 +107,12 @@ export {
   // Permission testing helpers
   expectPermissionDenied,
   expectAccessGranted,
-  expectScopeRequired
+  expectScopeRequired,
+  // Test context classes
+  KernelTestContext,
+  ProfileTestContext,
+  RouterTestContext,
+  RWSTestContext
 } from './utils/test-utils.mycelia.js';
 
 // Router Security Utilities
@@ -96,4 +121,31 @@ export {
   createScopeMapper, 
   getRolePermissionForScope 
 } from './utils/router-security-utils.mycelia.js';
+
+// Hook Creation Utilities (for external hook development)
+export { createHook } from './hooks/create-hook.mycelia.js';
+export { getDebugFlag } from './utils/debug-flag.utils.mycelia.js';
+export { createLogger, createSubsystemLogger } from './utils/logger.utils.mycelia.js';
+
+// Additional Utilities
+export { findFacet } from './utils/find-facet.utils.mycelia.js';
+export { MessagePool, globalMessagePool, createPooledMessage, withPooledMessage } from './utils/message-pool.mycelia.js';
+export { parseVersion, isValidSemver, compareVersions, satisfiesRange, getDefaultVersion, validateVersion } from './utils/semver.utils.mycelia.js';
+export { createStructuredLogger, createStructuredLoggerFromMessage } from './utils/structured-logger.utils.mycelia.js';
+export { generateTraceId, inheritTraceId, extractTraceIdFromHeaders, injectTraceIdIntoHeaders } from './utils/trace.utils.mycelia.js';
+// Export Facet so external hooks use the same instance as mycelia-kernel
+export { Facet } from 'mycelia-kernel-plugin/core';
+export { FacetManager } from './models/facet-manager/facet-manager.mycelia.js';
+
+// WebSocket models
+export { WebSocketConnection } from './models/websocket/websocket-connection.mycelia.js';
+
+// Kernel subsystem models
+export { Channel } from './models/kernel-subsystem/channel-manager-subsystem/channel.mycelia.js';
+export { ErrorRecord, ERROR_TYPES, ERROR_SEVERITY } from './models/kernel-subsystem/error-manager-subsystem/error-record.mycelia.js';
+export { BoundedErrorStore } from './models/kernel-subsystem/error-manager-subsystem/bounded-error-store.mycelia.js';
+export { PendingResponse } from './models/kernel-subsystem/response-manager-subsystem/pending-response.mycelia.js';
+
+// Result utility
+export { Result } from './models/result/result.mycelia.js';
 

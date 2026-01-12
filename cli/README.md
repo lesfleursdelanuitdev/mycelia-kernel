@@ -149,6 +149,73 @@ mycelia-kernel generate queries-ui
 
 **Note:** This command scans all `*.queries.def.mycelia.js` files in `src/subsystems/` and generates corresponding query functions. Queries use the `subsystem.queries.ask()` method for synchronous, read-only operations.
 
+### `mycelia-kernel generate test-utilities`
+
+Generate testing utilities including mock facets, mock subsystems, and test helpers.
+
+**Example:**
+```bash
+mycelia-kernel generate test-utilities
+```
+
+**Creates:**
+- `src/test-utils/mock-facets.mycelia.js` - Mock facet generators (router, queue, logger, identity)
+- `src/test-utils/mock-subsystems.mycelia.js` - Mock subsystem generators
+- `src/test-utils/test-helpers.mycelia.js` - Test helper functions (MessageSystem, messages, PKRs)
+- `src/test-utils/index.mycelia.js` - Index file with all exports
+
+**Usage:**
+```javascript
+import {
+  createMockRouterFacet,
+  createMockSubsystem,
+  createTestMessageSystem,
+  createTestMessage,
+  createTestPkr
+} from './src/test-utils/index.mycelia.js';
+
+// Create mock facets
+const router = createMockRouterFacet();
+router.registerRoute('test://path', handler);
+
+// Create mock subsystem
+const mockSubsystem = createMockSubsystem('test', {
+  facets: { router }
+});
+
+// Create test context
+const messageSystem = await createTestMessageSystem();
+const message = createTestMessage('test://path', { data: 'test' });
+const userPkr = createTestPkr('friend', { name: 'test-user' });
+```
+
+### `mycelia-kernel generate test <Subsystem>`
+
+Generate test file scaffolding for a subsystem.
+
+**Options:**
+- `--test-dir <dir>`: Test directory (default: `tests`)
+
+**Example:**
+```bash
+mycelia-kernel generate test UserService
+mycelia-kernel generate test UserService --test-dir __tests__
+```
+
+**Creates:**
+- `tests/subsystems/<name>/<name>.subsystem.test.js` - Test file with scaffolding
+
+**Generated Test File Includes:**
+- Test setup with MessageSystem and PKR creation
+- Initialization tests
+- Route tests (if routes exist)
+- Command tests (if commands exist)
+- Query tests (if queries exist)
+- Message processing tests
+- Error handling tests
+
+**Note:** The generator automatically detects if the subsystem has routes, commands, or queries and includes appropriate test sections.
+
 ### `mycelia-kernel routes <subsystem>`
 
 List all routes for a subsystem.
@@ -296,8 +363,8 @@ Example: UserServiceSubsystem, DataProcessorSubsystem
 mycelia-kernel init --name my-app
 
 # 2. Generate subsystems
-mycelia-kernel generate subsystem Example
-mycelia-kernel generate subsystem UserManager
+mycelia-kernel generate subsystem Example --use-defaults-async
+mycelia-kernel generate subsystem UserManager --use-defaults-async
 
 # 3. Generate hooks
 mycelia-kernel generate hook CustomLogger
@@ -305,14 +372,24 @@ mycelia-kernel generate hook CustomLogger
 # 4. Generate facet contracts
 mycelia-kernel generate facet-contract StorageContract
 
-# 5. Generate routes-ui (after defining routes in route definition files)
+# 5. Generate test utilities (recommended before writing tests)
+mycelia-kernel generate test-utilities
+
+# 6. Generate test files for subsystems
+mycelia-kernel generate test Example
+mycelia-kernel generate test UserManager
+
+# 7. Generate routes-ui (after defining routes in route definition files)
 mycelia-kernel generate routes-ui
 
-# 6. Generate commands-ui (after defining commands in command definition files)
+# 8. Generate commands-ui (after defining commands in command definition files)
 mycelia-kernel generate commands-ui
 
-# 7. Generate queries-ui (after defining queries in query definition files)
+# 9. Generate queries-ui (after defining queries in query definition files)
 mycelia-kernel generate queries-ui
+
+# 10. Run health checks
+mycelia-kernel doctor
 ```
 
 ## Generated File Structure
@@ -372,6 +449,26 @@ src/queries-ui/
 ├── example-queries.mycelia.js        # Example subsystem queries
 ├── user-manager-queries.mycelia.js  # UserManager subsystem queries
 └── index.mycelia.js                  # Re-exports
+```
+
+### Test Utilities
+
+```
+src/test-utils/
+├── mock-facets.mycelia.js            # Mock facet generators
+├── mock-subsystems.mycelia.js        # Mock subsystem generators
+├── test-helpers.mycelia.js           # Test helper functions
+└── index.mycelia.js                  # Re-exports
+```
+
+### Test Files
+
+```
+tests/subsystems/
+├── example/
+│   └── example.subsystem.test.js     # Example subsystem tests
+└── user-manager/
+    └── user-manager.subsystem.test.js # UserManager subsystem tests
 ```
 
 ## Route Definitions Format

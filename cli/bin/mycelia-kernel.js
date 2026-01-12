@@ -63,11 +63,12 @@ program
   .command('generate')
   .alias('g')
   .description('Generate code files')
-  .argument('<type>', 'Type to generate: subsystem, hook, facet-contract, routes-ui, commands-ui, queries-ui')
-  .argument('[name]', 'Name for the generated item')
+  .argument('<type>', 'Type to generate: subsystem, hook, facet-contract, routes-ui, commands-ui, queries-ui, test-utilities, test')
+  .argument('[name]', 'Name for the generated item (required for: subsystem, hook, facet-contract, test)')
   .option('--with-example', 'Include example code')
   .option('--use-defaults-async', 'Use canonical (asynchronous) default hooks for subsystem')
   .option('--use-defaults-sync', 'Use synchronous default hooks for subsystem (kernel-like)')
+  .option('--test-dir <dir>', 'Test directory (default: tests)')
   .action(generateCommand);
 
 // Routes command

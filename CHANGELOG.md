@@ -5,6 +5,54 @@ All notable changes to Mycelia Kernel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.6] - 2025-01-12
+
+### Added
+- **Comprehensive Exports** - Exported all hooks, models, and utilities from main package
+  - All 46 hooks now exported (including `useCommands`, `useKernelServices`, `useProfiles`, `usePrincipals`, `useErrorClassifier`, `useBoundedErrorStore`, `useDBTransactions`, `useDBMigrations`, `useDBQueryBuilder`)
+  - All server hooks exported (`useExpressServer`, `useFastifyServer`, `useHonoServer`, `useServerRoutes`)
+  - All websocket hooks exported (`useWebSocketServer`)
+  - All kernel subsystems exported (`ErrorManagerSubsystem`, `ChannelManagerSubsystem`, `ResponseManagerSubsystem`)
+  - All security models exported (`PKR`, `ReaderWriterSet`, `PrincipalRegistry`)
+  - All utility functions exported (message pooling, semver, structured logging, tracing, test contexts)
+  - Total: 120+ exports available from main package
+- **CLI Testing Support** - Added test utilities and test file generation to CLI
+  - `mycelia-kernel generate test-utilities` - Generates mock facets, mock subsystems, and test helpers
+  - `mycelia-kernel generate test <Subsystem>` - Generates test file scaffolding for subsystems
+  - Includes mock facets (router, queue, logger, identity), mock subsystems, and test helpers
+- **README Updates** - Enhanced documentation with proper messaging patterns
+  - Added section on correct way to send messages from subsystems using `subsystem.identity.sendProtected()`
+  - Clarified security benefits and why this pattern is required
+  - Updated Quick Start to emphasize CLI usage
+
+### Changed
+- **README** - Updated to prominently feature CLI tools and proper messaging patterns
+  - CLI tools section added early in documentation
+  - Clear examples of correct vs. incorrect message sending patterns
+  - Emphasis on security and proper subsystem communication
+
+## [1.6.5] - 2025-01-12
+
+### Added
+- **Hook Creation Utilities Exports** - Exported `createHook`, `getDebugFlag`, `createLogger`, and `Facet` from main package
+  - Enables external projects to create custom hooks
+  - `createHook` - Factory function for creating hooks
+  - `getDebugFlag` - Utility for extracting debug flags from config/context
+  - `createLogger` - Utility for creating debug-aware loggers
+  - `Facet` - Facet class for hook return values (ensures same instance as hook processor)
+  - Improves extensibility and allows gateway projects to create project-specific hooks
+  - Fixes `instanceof Facet` checks by ensuring external hooks use the same Facet class instance
+
+## [1.6.4] - 2025-01-12
+
+### Added
+- **useExtractHandlerResult Hook** - New utility hook for extracting handler results from routing results
+  - Handles nested result structures from MessageSystem router
+  - Supports MessageSystem router results, accepted structures, data wrappers, and error results
+  - Provides `extract()` method with configurable error handling
+  - Provides `extractSafe()` convenience method for non-throwing extraction
+  - Useful for HTTP gateways and API adapters that need to normalize routing results
+
 ## [1.6.3] - 2025-01-12
 
 ### Fixed
