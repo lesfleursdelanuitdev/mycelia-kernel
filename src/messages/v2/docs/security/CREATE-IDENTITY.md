@@ -58,12 +58,14 @@ The kernel instance with `sendProtected` method.
 
 ## Permission Queries
 
-### `canRead(pkr)`
+### `canRead(pkr, options)`
 
-Checks if a PKR has read permission.
+Checks if a PKR has read permission, with optional inheritance from parent resources.
 
 **Parameters:**
 - `pkr` (PKR, required) - Public Key Record to check
+- `options` (Object, optional) - Options object
+  - `inherit` (boolean, optional) - If `true`, check parent resource permissions if own check fails (default: `false`)
 
 **Returns:** `boolean` - `true` if can read
 
@@ -73,14 +75,21 @@ const identity = createIdentity(principals, ownerPkr, kernel);
 if (identity.canRead(pkr)) {
   // Allow read operation
 }
+
+// With inheritance: check parent resource if own permission fails
+if (identity.canRead(pkr, { inherit: true })) {
+  // Allow read operation (either own permission or inherited from parent)
+}
 ```
 
-### `canWrite(pkr)`
+### `canWrite(pkr, options)`
 
-Checks if a PKR has write permission.
+Checks if a PKR has write permission, with optional inheritance from parent resources.
 
 **Parameters:**
 - `pkr` (PKR, required) - Public Key Record to check
+- `options` (Object, optional) - Options object
+  - `inherit` (boolean, optional) - If `true`, check parent resource permissions if own check fails (default: `false`)
 
 **Returns:** `boolean` - `true` if can write
 
@@ -89,14 +98,21 @@ Checks if a PKR has write permission.
 if (identity.canWrite(pkr)) {
   // Allow write operation
 }
+
+// With inheritance: check parent resource if own permission fails
+if (identity.canWrite(pkr, { inherit: true })) {
+  // Allow write operation (either own permission or inherited from parent)
+}
 ```
 
-### `canGrant(pkr)`
+### `canGrant(pkr, options)`
 
-Checks if a PKR has grant permission.
+Checks if a PKR has grant permission, with optional inheritance from parent resources.
 
 **Parameters:**
 - `pkr` (PKR, required) - Public Key Record to check
+- `options` (Object, optional) - Options object
+  - `inherit` (boolean, optional) - If `true`, check parent resource permissions if own check fails (default: `false`)
 
 **Returns:** `boolean` - `true` if can grant
 
@@ -105,7 +121,51 @@ Checks if a PKR has grant permission.
 if (identity.canGrant(pkr)) {
   // Allow permission delegation
 }
+
+// With inheritance: check parent resource if own permission fails
+if (identity.canGrant(pkr, { inherit: true })) {
+  // Allow permission delegation (either own permission or inherited from parent)
+}
 ```
+
+## Permission Inheritance
+
+When `inherit: true` is passed to permission query methods (`canRead`, `canWrite`, `canGrant`), the identity will check parent resource permissions if the own permission check fails. This is useful for hierarchical resource structures where child resources should inherit permissions from their parents.
+
+**How It Works:**
+1. First checks own RWS permissions
+2. If permission is denied and `inherit: true`, checks parent resource's permissions
+3. Recursively checks up the hierarchy until permission is found or no parent exists
+
+**Example - Hierarchical Resources:**
+```javascript
+// Tree resource (parent)
+const treeResource = accessControl.createResource(owner, 'tree-123', treeInstance);
+treeIdentity.grantReader(ownerPkr, userPkr); // User has read on tree
+
+// Branch resource (child of tree)
+const branchResource = new Resource({
+  name: 'branch-456',
+  type: 'gedcom-branch',
+  parent: treeResource,
+  instance: branchInstance
+});
+const branchIdentity = createIdentity(principals, branchPkr, kernel);
+
+// Node resource (child of branch)
+const nodeResource = new Resource({
+  name: 'node-789',
+  type: 'gedcom-node',
+  parent: branchResource,
+  instance: nodeInstance
+});
+const nodeIdentity = createIdentity(principals, nodePkr, kernel);
+
+// User can read node because they have read on tree (inherited through branch)
+nodeIdentity.canRead(userPkr, { inherit: true }); // true
+```
+
+**Note:** Inheritance only works for resource identities (identities created for Resource principals). Non-resource identities will ignore the `inherit` option.
 
 ## Permission Wrappers
 

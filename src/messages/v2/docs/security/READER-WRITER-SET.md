@@ -7,6 +7,7 @@ The **ReaderWriterSet** class provides fine-grained access control for resources
 **Key Features:**
 - **Three Permission Levels**: Read, Write, Grant
 - **Granter/Grantee Model**: Permission delegation with validation
+- **Multiple Granters**: Support for multiple users with grant permission
 - **Kernel Privileges**: Kernel always has full access
 - **Owner Permissions**: Owners have full access to their resources
 - **Promote/Demote**: Upgrade/downgrade permissions
@@ -24,6 +25,7 @@ The **ReaderWriterSet** class provides fine-grained access control for resources
 
 - **Kernel**: Always has full access (read, write, grant)
 - **Owner**: Has full access to their own resources
+- **Granters**: Can grant permissions to others (in addition to read/write if also granted)
 - **Writers**: Can read and write
 - **Readers**: Can only read
 
@@ -155,9 +157,42 @@ const success = rws.demote(ownerPkr, writerPkr);
 // Writer becomes reader
 ```
 
+### `addGranter(granter, grantee)`
+
+Grants grant permission to a grantee, allowing them to delegate permissions to others.
+
+**Parameters:**
+- `granter` (PKR, required) - The principal granting permission (must have grant permission)
+- `grantee` (PKR, required) - The principal receiving grant permission
+
+**Returns:** `boolean` - `true` if successful, `false` if validation fails
+
+**Example:**
+```javascript
+// Owner grants grant permission to a user
+const success = rws.addGranter(ownerPkr, userPkr);
+// User can now grant permissions to others
+rws.addReader(userPkr, anotherUserPkr);
+```
+
+### `removeGranter(granter, grantee)`
+
+Revokes grant permission from a grantee.
+
+**Parameters:**
+- `granter` (PKR, required) - The principal revoking permission (must have grant permission)
+- `grantee` (PKR, required) - The principal losing grant permission
+
+**Returns:** `boolean` - `true` if successful
+
+**Example:**
+```javascript
+const success = rws.removeGranter(ownerPkr, userPkr);
+```
+
 ### `clear()`
 
-Clears all readers and writers.
+Clears all readers, writers, and granters.
 
 **Example:**
 ```javascript
@@ -240,6 +275,7 @@ Checks if a PKR has grant permission.
 **Permission Logic:**
 - Kernel: Always `true`
 - Owner: Always `true`
+- Granters: `true` (if granted via `addGranter`)
 - Others: `false`
 
 **Example:**
@@ -305,6 +341,33 @@ Returns the number of writers.
 const count = rws.writerCount();
 ```
 
+### `hasGranter(pkr)`
+
+Checks if a PKR is in the granters set.
+
+**Parameters:**
+- `pkr` (PKR, required) - Public Key Record to check
+
+**Returns:** `boolean` - `true` if is a granter
+
+**Example:**
+```javascript
+if (rws.hasGranter(pkr)) {
+  // PKR has grant permission
+}
+```
+
+### `granterCount()`
+
+Returns the number of granters.
+
+**Returns:** `number` - Count of granters
+
+**Example:**
+```javascript
+const count = rws.granterCount();
+```
+
 ## Utility Methods
 
 ### `clone()`
@@ -331,7 +394,8 @@ const record = rws.toRecord();
 //   uuid: "...",
 //   owner: "...",
 //   readers: [...],
-//   writers: [...]
+//   writers: [...],
+//   granters: [...]
 // }
 ```
 
@@ -343,7 +407,7 @@ Returns a human-readable string representation.
 
 **Example:**
 ```javascript
-rws.toString(); // "[RWS uuid] readers=2 writers=1"
+rws.toString(); // "[RWS uuid] readers=2 writers=1 granters=1"
 ```
 
 ## Usage Examples

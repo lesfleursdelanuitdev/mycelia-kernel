@@ -55,9 +55,116 @@ export function createIdentity(principals, ownerPkr, kernel) {
 
   // ---- Permission Queries ----
 
-  const canRead = (pkr) => rws.canRead(pkr);
-  const canWrite = (pkr) => rws.canWrite(pkr);
-  const canGrant = (pkr) => rws.canGrant(pkr);
+  /**
+   * Get the parent resource's identity if this identity belongs to a resource with a parent
+   * @private
+   */
+  function getParentResourceIdentity() {
+    // Try to get the principal's instance to find the resource
+    const principal = principals.get(ownerPkr.uuid);
+    if (!principal) return null;
+
+    const instance = principal.instance;
+    if (!instance) return null;
+
+    // Check if instance is a Resource
+    if (!instance.isResource || instance.kind !== 'resource') return null;
+
+    // Get parent resource
+    const parentResource = instance.parent;
+    if (!parentResource) return null;
+
+    // Get parent resource's instance (the actual resource instance object)
+    const parentInstance = parentResource.instance;
+    if (!parentInstance) return null;
+
+    // Get parent resource's identity
+    return parentInstance.identity || null;
+  }
+
+  /**
+   * Check permission with optional inheritance from parent resources
+   * @private
+   */
+  function checkPermissionWithInheritance(permissionType, pkr, options = {}) {
+    // First check own permissions
+    let hasPermission = false;
+    switch (permissionType) {
+      case 'read':
+        hasPermission = rws.canRead(pkr);
+        break;
+      case 'write':
+        hasPermission = rws.canWrite(pkr);
+        break;
+      case 'grant':
+        hasPermission = rws.canGrant(pkr);
+        break;
+    }
+
+    if (hasPermission) {
+      return true;
+    }
+
+    // If inheritance is enabled and permission check failed, check parent
+    if (options.inherit) {
+      const parentIdentity = getParentResourceIdentity();
+      if (parentIdentity) {
+        // Recursively check parent with inheritance enabled
+        switch (permissionType) {
+          case 'read':
+            return parentIdentity.canRead(pkr, { inherit: true });
+          case 'write':
+            return parentIdentity.canWrite(pkr, { inherit: true });
+          case 'grant':
+            return parentIdentity.canGrant(pkr, { inherit: true });
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if a PKR can read, with optional inheritance from parent resources
+   * @param {PKR} pkr - Public Key Record to check
+   * @param {Object} [options={}] - Options object
+   * @param {boolean} [options.inherit=false] - If true, check parent resource permissions if own check fails
+   * @returns {boolean} - `true` if can read
+   */
+  function canRead(pkr, options = {}) {
+    if (!options.inherit) {
+      return rws.canRead(pkr);
+    }
+    return checkPermissionWithInheritance('read', pkr, options);
+  }
+
+  /**
+   * Check if a PKR can write, with optional inheritance from parent resources
+   * @param {PKR} pkr - Public Key Record to check
+   * @param {Object} [options={}] - Options object
+   * @param {boolean} [options.inherit=false] - If true, check parent resource permissions if own check fails
+   * @returns {boolean} - `true` if can write
+   */
+  function canWrite(pkr, options = {}) {
+    if (!options.inherit) {
+      return rws.canWrite(pkr);
+    }
+    return checkPermissionWithInheritance('write', pkr, options);
+  }
+
+  /**
+   * Check if a PKR can grant, with optional inheritance from parent resources
+   * @param {PKR} pkr - Public Key Record to check
+   * @param {Object} [options={}] - Options object
+   * @param {boolean} [options.inherit=false] - If true, check parent resource permissions if own check fails
+   * @returns {boolean} - `true` if can grant
+   */
+  function canGrant(pkr, options = {}) {
+    if (!options.inherit) {
+      return rws.canGrant(pkr);
+    }
+    return checkPermissionWithInheritance('grant', pkr, options);
+  }
 
   // ---- Permission-Enforced Wrappers ----
 
@@ -169,8 +276,10 @@ export function createIdentity(principals, ownerPkr, kernel) {
 
   const grantReader = (granter, grantee) => rws.addReader(granter, grantee);
   const grantWriter = (granter, grantee) => rws.addWriter(granter, grantee);
+  const grantGranter = (granter, grantee) => rws.addGranter(granter, grantee);
   const revokeReader = (granter, grantee) => rws.removeReader(granter, grantee);
   const revokeWriter = (granter, grantee) => rws.removeWriter(granter, grantee);
+  const revokeGranter = (granter, grantee) => rws.removeGranter(granter, grantee);
   const promote = (granter, grantee) => rws.promote(granter, grantee);
   const demote = (granter, grantee) => rws.demote(granter, grantee);
 
@@ -416,8 +525,10 @@ export function createIdentity(principals, ownerPkr, kernel) {
     // Grant/revoke helpers
     grantReader,
     grantWriter,
+    grantGranter,
     revokeReader,
     revokeWriter,
+    revokeGranter,
     promote,
     demote,
     // Messaging

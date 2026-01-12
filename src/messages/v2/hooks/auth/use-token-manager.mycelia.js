@@ -33,6 +33,16 @@ export const useTokenManager = createHook({
 
     const authStorage = authStorageResult.facet;
 
+    // Get kernel for AccessControlSubsystem (optional - for PKR mapping)
+    const kernel = config.kernel || subsystem.getRoot?.();
+    let accessControl = null;
+    if (kernel && typeof kernel.getAccessControl === 'function') {
+      accessControl = kernel.getAccessControl();
+    }
+
+    // Cache for user-to-friend mappings (userId -> Friend)
+    const userFriendCache = new Map();
+
     const accessTokenExpiry = config.accessTokenExpiry || 3600000; // 1 hour
     const refreshTokenExpiry = config.refreshTokenExpiry || 604800000; // 7 days
     const signingKey = config.signingKey || 'default-secret-key-change-in-production';
@@ -203,12 +213,99 @@ export const useTokenManager = createHook({
     }
 
     /**
+     * Get or create Friend for a user
+     * @param {string} userId - User ID
+     * @param {Object} [userData] - Optional user data from authStorage
+     * @returns {Promise<{success: boolean, friend?: Friend, pkr?: PKR, error?: Error}>}
+     */
+    async function getOrCreateFriendForUser(userId, userData = null) {
+      try {
+        // Check cache first
+        if (userFriendCache.has(userId)) {
+          const friend = userFriendCache.get(userId);
+          return {
+            success: true,
+            friend,
+            pkr: friend.identity?.pkr || null
+          };
+        }
+
+        // If AccessControlSubsystem is not available, cannot create Friend
+        if (!accessControl) {
+          if (debug) {
+            logger.log('AccessControlSubsystem not available, cannot create Friend for user');
+          }
+          return { success: false, error: new Error('AccessControlSubsystem not available') };
+        }
+
+        // Get user data if not provided
+        if (!userData) {
+          const userResult = await authStorage.getUserById(userId);
+          if (!userResult.success || !userResult.data) {
+            return { success: false, error: new Error('User not found') };
+          }
+          userData = userResult.data;
+        }
+
+        // Try to find existing Friend by name (user-${userId})
+        const friendName = `user-${userId}`;
+        const principalsFacet = accessControl.find('principals');
+        if (principalsFacet && principalsFacet.registry) {
+          // Check if Friend with this name already exists
+          // PrincipalRegistry.has() checks by uuid, name, or symbol
+          if (principalsFacet.registry.has(friendName)) {
+            // Get principal by iterating and checking name
+            // (PrincipalRegistry doesn't expose getByName directly)
+            for (const principal of principalsFacet.registry) {
+              if (principal.name === friendName && principal.kind === 'friend') {
+                const friend = principal.instance;
+                if (friend && friend.isFriend) {
+                  // Cache the friend
+                  userFriendCache.set(userId, friend);
+                  return {
+                    success: true,
+                    friend,
+                    pkr: friend.identity?.pkr || null
+                  };
+                }
+              }
+            }
+          }
+        }
+
+        // Friend doesn't exist, create a new one
+        const friend = accessControl.createFriend(friendName, {
+          metadata: {
+            userId,
+            email: userData.email || null,
+            username: userData.username || null,
+            ...(userData.metadata || {})
+          }
+        });
+
+        // Cache the friend
+        userFriendCache.set(userId, friend);
+
+        return {
+          success: true,
+          friend,
+          pkr: friend.identity.pkr
+        };
+      } catch (error) {
+        logger.error('Get or create friend error:', error);
+        return { success: false, error };
+      }
+    }
+
+    /**
      * Validate and decode token
      * @param {string} token - Token to validate
      * @param {string} [expectedType] - Expected token type
+     * @param {Object} [options={}] - Options object
+     * @param {boolean} [options.includePKR=false] - If true, return PKR in result (requires AccessControlSubsystem)
      * @returns {Promise<{success: boolean, valid?: boolean, data?: Object, error?: Error}>}
      */
-    async function validateToken(token, expectedType) {
+    async function validateToken(token, expectedType, options = {}) {
       try {
         if (!token || typeof token !== 'string') {
           return { success: true, valid: false };
@@ -249,7 +346,7 @@ export const useTokenManager = createHook({
               return { success: true, valid: false, data: { revoked: true } };
             }
 
-            return {
+            const result = {
               success: true,
               valid: true,
               data: {
@@ -259,6 +356,19 @@ export const useTokenManager = createHook({
                 payload
               }
             };
+
+            // If includePKR is requested, get or create Friend and return PKR
+            if (options.includePKR) {
+              const friendResult = await getOrCreateFriendForUser(payload.sub);
+              if (friendResult.success && friendResult.pkr) {
+                result.data.pkr = friendResult.pkr;
+                result.data.friend = friendResult.friend;
+              } else if (debug) {
+                logger.warn('Failed to get PKR for user:', friendResult.error?.message);
+              }
+            }
+
+            return result;
           } catch (error) {
             return { success: true, valid: false };
           }
@@ -280,7 +390,7 @@ export const useTokenManager = createHook({
             return { success: true, valid: false, data: { wrongType: true } };
           }
 
-          return {
+          const result = {
             success: true,
             valid: true,
             data: {
@@ -290,6 +400,19 @@ export const useTokenManager = createHook({
               tokenRecord
             }
           };
+
+          // If includePKR is requested, get or create Friend and return PKR
+          if (options.includePKR) {
+            const friendResult = await getOrCreateFriendForUser(tokenRecord.userId);
+            if (friendResult.success && friendResult.pkr) {
+              result.data.pkr = friendResult.pkr;
+              result.data.friend = friendResult.friend;
+            } else if (debug) {
+              logger.warn('Failed to get PKR for user:', friendResult.error?.message);
+            }
+          }
+
+          return result;
         }
       } catch (error) {
         logger.error('Validate token error:', error);
@@ -359,7 +482,8 @@ export const useTokenManager = createHook({
         generateApiKey,
         validateToken,
         refreshToken,
-        revokeToken
+        revokeToken,
+        getOrCreateFriendForUser
       });
   }
 });

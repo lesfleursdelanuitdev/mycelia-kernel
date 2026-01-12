@@ -104,9 +104,91 @@ describe('ReaderWriterSet', () => {
         owner: ownerPKR.uuid,
         readers: expect.any(Array),
         writers: expect.any(Array),
+        granters: expect.any(Array),
       }),
     );
     expect(rws.toString()).toContain('readers=1');
+  });
+
+  it('supports multiple granters with addGranter and removeGranter', () => {
+    const granter1 = makePKR('granter1');
+    const granter2 = makePKR('granter2');
+    const grantee = makePKR('grantee');
+
+    // Owner grants granter permission to granter1
+    expect(rws.addGranter(ownerPKR, granter1)).toBe(true);
+    expect(rws.hasGranter(granter1)).toBe(true);
+    expect(rws.granterCount()).toBe(1);
+    expect(rws.canGrant(granter1)).toBe(true);
+
+    // granter1 can now grant permissions
+    expect(rws.addReader(granter1, grantee)).toBe(true);
+    expect(rws.hasReader(grantee)).toBe(true);
+
+    // Owner grants granter permission to granter2
+    expect(rws.addGranter(ownerPKR, granter2)).toBe(true);
+    expect(rws.hasGranter(granter2)).toBe(true);
+    expect(rws.granterCount()).toBe(2);
+    expect(rws.canGrant(granter2)).toBe(true);
+
+    // granter2 can also grant permissions
+    const grantee2 = makePKR('grantee2');
+    expect(rws.addWriter(granter2, grantee2)).toBe(true);
+    expect(rws.hasWriter(grantee2)).toBe(true);
+
+    // Remove granter1
+    expect(rws.removeGranter(ownerPKR, granter1)).toBe(true);
+    expect(rws.hasGranter(granter1)).toBe(false);
+    expect(rws.granterCount()).toBe(1);
+    expect(rws.canGrant(granter1)).toBe(false);
+
+    // granter1 can no longer grant permissions
+    const grantee3 = makePKR('grantee3');
+    expect(rws.addReader(granter1, grantee3)).toBe(false);
+  });
+
+  it('only current granters can add new granters', () => {
+    const granter1 = makePKR('granter1');
+    const granter2 = makePKR('granter2');
+    const nonGranter = makePKR('nonGranter');
+
+    // Owner grants granter permission to granter1
+    rws.addGranter(ownerPKR, granter1);
+
+    // granter1 can grant granter permission to granter2
+    expect(rws.addGranter(granter1, granter2)).toBe(true);
+    expect(rws.hasGranter(granter2)).toBe(true);
+
+    // nonGranter cannot grant granter permission
+    expect(rws.addGranter(nonGranter, makePKR('grantee'))).toBe(false);
+  });
+
+  it('clone includes granters and toRecord serializes granters', () => {
+    const granter = makePKR('granter');
+    rws.addGranter(ownerPKR, granter);
+
+    const clone = rws.clone();
+    expect(clone.hasGranter(granter)).toBe(true);
+    expect(clone.canGrant(granter)).toBe(true);
+
+    const record = rws.toRecord();
+    expect(record.granters).toEqual(expect.any(Array));
+    expect(record.granters.length).toBe(1);
+    expect(rws.toString()).toContain('granters=1');
+  });
+
+  it('clear removes all granters', () => {
+    const granter1 = makePKR('granter1');
+    const granter2 = makePKR('granter2');
+    
+    rws.addGranter(ownerPKR, granter1);
+    rws.addGranter(ownerPKR, granter2);
+    expect(rws.granterCount()).toBe(2);
+
+    rws.clear();
+    expect(rws.granterCount()).toBe(0);
+    expect(rws.hasGranter(granter1)).toBe(false);
+    expect(rws.hasGranter(granter2)).toBe(false);
   });
 });
 

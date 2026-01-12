@@ -46,6 +46,7 @@ import { Facet } from 'mycelia-kernel-plugin/core';
 import { createHook } from '../create-hook.mycelia.js';
 import { getDebugFlag } from '../../utils/debug-flag.utils.mycelia.js';
 import { createLogger } from '../../utils/logger.utils.mycelia.js';
+import { createGetUserRole } from '../../utils/router-security-utils.mycelia.js';
 
 /**
  * Check if scope permission meets required permission level
@@ -230,12 +231,25 @@ export const useRouterWithScopes = createHook({
     // If not provided, will use metadata.scope directly from route
     const scopeMapper = config.scopeMapper || null;
     
-    // Get user role function from config
+    // Get user role function from config, or create it automatically if kernel is available
     // This is required for scope checking to work
-    const getUserRole = config.getUserRole || null;
+    let getUserRole = config.getUserRole || null;
+    
+    // If getUserRole is not provided but kernel is available, create it automatically
+    // This allows subsystems to use scope checking without manually creating getUserRole
+    if (!getUserRole && kernel) {
+      try {
+        getUserRole = createGetUserRole(kernel);
+        if (debug) {
+          logger.log('useRouterWithScopes: automatically created getUserRole from kernel');
+        }
+      } catch (error) {
+        logger.warn('useRouterWithScopes: failed to create getUserRole automatically:', error.message);
+      }
+    }
     
     if (!getUserRole && kernel) {
-      logger.warn('useRouterWithScopes: getUserRole function not provided in config. Scope checking will be disabled.');
+      logger.warn('useRouterWithScopes: getUserRole function not available. Scope checking will be disabled.');
     }
     
     const version = ctx.__version || '0.0.0';
