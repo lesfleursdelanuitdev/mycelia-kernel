@@ -88,7 +88,19 @@ export const useSynchronous = createHook({
       }
       
       // Set processImmediately flag
-      message.meta.processImmediately = true;
+      // Use updateMutable if available (for frozen meta objects), otherwise set directly
+      if (message.meta && typeof message.meta.updateMutable === 'function') {
+        message.meta.updateMutable({ processImmediately: true });
+      } else {
+        try {
+          message.meta.processImmediately = true;
+        } catch (error) {
+          // Meta object is frozen, but that's okay - processor will handle it
+          if (debug) {
+            logger.warn('Could not set processImmediately on frozen meta object, continuing anyway');
+          }
+        }
+      }
 
       logger.log('Processing message immediately');
 

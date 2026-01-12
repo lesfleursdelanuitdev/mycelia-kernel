@@ -5,6 +5,19 @@ All notable changes to Mycelia Kernel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2025-01-12
+
+### Fixed
+- **useSynchronous Hook** - Fixed handling of frozen meta objects
+  - Now uses `updateMutable()` when available to set `processImmediately` flag
+  - Gracefully handles frozen meta objects without throwing errors
+  - Improves compatibility with strict message metadata implementations
+
+### Added
+- **Export useRequests Hook** - Added `useRequests` to main package exports
+  - Required by `useQueries` hook for query functionality
+  - Enables subsystems to use request/response patterns
+
 ## [1.6.0] - 2025-01-11
 
 ### Added

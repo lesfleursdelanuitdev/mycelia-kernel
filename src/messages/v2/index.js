@@ -34,10 +34,11 @@ export { useMessages } from './hooks/messages/use-messages.mycelia.js';
 export { useResponses } from './hooks/responses/use-responses.mycelia.js';
 export { useChannels } from './hooks/channels/use-channels.mycelia.js';
 export { useHierarchy } from './hooks/hierarchy/use-hierarchy.mycelia.js';
+export { useRequests } from './hooks/requests/use-requests.mycelia.js';
 export { useQueries } from './hooks/queries/use-queries.mycelia.js';
+export { useSynchronous } from './hooks/synchronous/use-synchronous.mycelia.js';
 export { ChildSubsystemRegistry } from './hooks/hierarchy/child-subsystem-registry.mycelia.js';
 export { DefaultHooks, createCanonicalDefaultHooks, createSynchronousDefaultHooks, FACET_KINDS } from './models/defaults/default-hooks.mycelia.js';
-export { useSynchronous } from './hooks/synchronous/use-synchronous.mycelia.js';
 export { useHealthCheck } from './hooks/health/use-health-check.mycelia.js';
 export { useProfiler } from './hooks/profiler/use-profiler.mycelia.js';
 export { useMemoryStorage } from './hooks/storage/memory/use-memory-storage.mycelia.js';
@@ -54,6 +55,9 @@ export { usePasswordManager } from './hooks/auth/use-password-manager.mycelia.js
 export { useTokenManager } from './hooks/auth/use-token-manager.mycelia.js';
 export { useSessionManager } from './hooks/auth/use-session-manager.mycelia.js';
 export { useAuthStrategies } from './hooks/auth/use-auth-strategies.mycelia.js';
+export { useExpressServer } from './hooks/server/express/use-express-server.mycelia.js';
+export { useFastifyServer } from './hooks/server/fastify/use-fastify-server.mycelia.js';
+export { useHonoServer } from './hooks/server/hono/use-hono-server.mycelia.js';
 
 // Utilities
 export { collectChildren, buildChildren, disposeChildren } from './models/base-subsystem/base-subsystem.utils.mycelia.js';
