@@ -5,6 +5,44 @@ All notable changes to Mycelia Kernel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.8] - 2025-01-XX
+
+### Added
+- **Multiple Granters Support** - Enhanced ReaderWriterSet to support multiple users with grant permission
+  - Added `addGranter()` and `removeGranter()` methods to ReaderWriterSet
+  - Added `hasGranter()` and `granterCount()` introspection methods
+  - Updated `canGrant()` to check granters set in addition to owner and kernel
+  - Enables multiple tree owners or co-administrators to delegate permissions
+  - Added comprehensive tests for multiple granters functionality
+- **Permission Inheritance** - Added optional permission inheritance for hierarchical resources
+  - Added `inherit` option to `canRead()`, `canWrite()`, and `canGrant()` methods in createIdentity
+  - Automatically checks parent resource permissions when own permission check fails
+  - Recursively traverses resource hierarchy up to root
+  - Enables tree owners to automatically have permissions on all child resources
+  - Added comprehensive inheritance tests covering single and multi-level hierarchies
+- **JWT to PKR Integration** - Extended useTokenManager to seamlessly map JWTs to Mycelia PKRs
+  - Added `getOrCreateFriendForUser()` method to auto-create Friend principals
+  - Added `includePKR` option to `validateToken()` method
+  - Automatically creates Friend principal for authenticated users when PKR is requested
+  - Caches user-to-friend mappings for performance
+  - Checks for existing Friends before creating new ones
+  - Enables seamless integration of external authentication with Mycelia's security system
+
+### Changed
+- **ReaderWriterSet** - Updated to support multiple granters
+  - `canGrant()` now checks granters set in addition to owner and kernel
+  - `clone()`, `toRecord()`, and `toString()` now include granters
+- **createIdentity** - Enhanced permission query methods
+  - `canRead()`, `canWrite()`, and `canGrant()` now accept optional `options` parameter
+  - Added `inherit` option for hierarchical permission checking
+- **useTokenManager** - Extended token validation
+  - `validateToken()` now accepts optional `options` parameter with `includePKR` flag
+  - Returns PKR and Friend in validation result when `includePKR: true`
+
+### Documentation
+- Updated `CREATE-IDENTITY.md` with permission inheritance documentation and examples
+- Updated `READER-WRITER-SET.md` with multiple granters documentation
+
 ## [1.6.6] - 2025-01-12
 
 ### Added
