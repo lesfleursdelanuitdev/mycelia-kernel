@@ -228,11 +228,25 @@ export class MessageRouter {
       }
       
       // Default: Accept message into subsystem queue (or process synchronously for query messages)
-      const accepted = await subsystem.accept(message, options);
+      const acceptResult = await subsystem.accept(message, options);
       
+      // For synchronous subsystems, accept() processes immediately and returns the handler result
+      // For non-synchronous subsystems, accept() returns a boolean (true/false)
+      // Check if the result is a processing result (object) vs boolean
+      if (acceptResult !== undefined && acceptResult !== null && typeof acceptResult === 'object' && acceptResult !== true && acceptResult !== false) {
+        // If acceptResult is an object (not a boolean), it's a processing result
+        // This happens for synchronous subsystems where accept() processes immediately
+        return {
+          accepted: true,
+          processed: true,
+          subsystem: subsystem.name,
+          result: acceptResult
+        };
+      }
       
+      // For non-synchronous subsystems, accept() returns boolean
       return {
-        accepted,
+        accepted: acceptResult === true,
         subsystem: subsystem.name,
         queueSize: subsystem.getQueueStatus().size
       };

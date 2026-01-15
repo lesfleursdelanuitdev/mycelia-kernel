@@ -1,11 +1,18 @@
 import { BaseSubsystem } from '../base-subsystem/base.subsystem.mycelia.js';
 import { createSynchronousDefaultHooks } from '../defaults/default-hooks.mycelia.js';
 import { useKernelServices } from '../../hooks/kernel-services/use-kernel-services.mycelia.js';
+import { useResourceHandlers } from '../../hooks/kernel-handlers/use-resource-handlers.mycelia.js';
+import { useFriendHandlers } from '../../hooks/kernel-handlers/use-friend-handlers.mycelia.js';
+import { usePermissionHandlers } from '../../hooks/kernel-handlers/use-permission-handlers.mycelia.js';
+import { useProfileHandlers } from '../../hooks/kernel-handlers/use-profile-handlers.mycelia.js';
+import { useSystemHandlers } from '../../hooks/kernel-handlers/use-system-handlers.mycelia.js';
 import { KernelChildAccessors } from './kernel-child-accessors.mycelia.js';
 import { KernelRegistration } from './kernel-registration.mycelia.js';
 import { KernelProtectedMessaging } from './kernel-protected-messaging.mycelia.js';
 import { KernelWrapper } from './kernel-wrapper.mycelia.js';
 import { Message } from '../message/message.mycelia.js';
+import { PRINCIPAL_KINDS } from '../security/security.utils.mycelia.js';
+import { KERNEL_ROUTES, createKernelHandlerMap } from './kernel.routes.def.mycelia.js';
 
 /**
  * KernelSubsystem
@@ -40,6 +47,13 @@ export class KernelSubsystem extends BaseSubsystem {
     
     // Install kernel services hook (creates and adds child subsystems)
     this.use(useKernelServices);
+    
+    // Install handler hooks for kernel:// routes
+    this.use(useResourceHandlers);
+    this.use(useFriendHandlers);
+    this.use(usePermissionHandlers);
+    this.use(useProfileHandlers);
+    this.use(useSystemHandlers);
     
     // Initialize helper modules (will be fully initialized after build)
     this.#childAccessors = new KernelChildAccessors(this);
@@ -101,8 +115,9 @@ export class KernelSubsystem extends BaseSubsystem {
    * 3) Child subsystems are automatically created and added by useKernelServices hook
    * 4) Child subsystems are automatically built by buildChildren()
    * 5) Wire identities for all child subsystems (access-control, error-manager, etc.)
-   * 6) Enable listeners if listeners hook is installed
-   * 7) Emit 'kernel://event/kernel-bootstapped' event if listeners are enabled
+   * 6) Register kernel:// routes for resource and friend creation
+   * 7) Enable listeners if listeners hook is installed
+   * 8) Emit 'kernel://event/kernel-bootstapped' event if listeners are enabled
    * 
    * @returns {Promise<void>}
    * @throws {Error} If hierarchy facet is not installed after build
@@ -118,6 +133,9 @@ export class KernelSubsystem extends BaseSubsystem {
     // 3. AccessControlSubsystem must be available
     const registration = this.#getRegistration();
     registration.registerChildSubsystems(this, {});
+    
+    // Register kernel:// routes for resource and friend creation
+    this.#registerKernelRoutes();
     
     // Enable listeners if listeners hook has been installed
     // Kernel always needs listeners enabled for event emission
@@ -135,6 +153,195 @@ export class KernelSubsystem extends BaseSubsystem {
       });
       listeners.emit('kernel://event/kernel-bootstapped', bootstrapMessage);
     }
+  }
+
+  /**
+   * Register kernel:// routes for resource, friend, permission, profile, and system management.
+   * Routes are defined in kernel.routes.def.mycelia.js
+   * @private
+   */
+  #registerKernelRoutes() {
+    const router = this.find('router');
+    if (!router) {
+      if (this.debug) {
+        console.warn('KernelSubsystem: router facet not found, skipping kernel:// route registration');
+      }
+      return;
+    }
+
+    // Note: No 'required' permission check - kernel routes are privileged operations
+    // Security is enforced by: 1) sendProtected verifies callerId, 2) kernel validates owner subsystem
+
+    // Register all routes from the routes definition
+    // Get handler facets and create handler map
+    const resourceHandlers = this.find('resourceHandlers');
+    const friendHandlers = this.find('friendHandlers');
+    const permissionHandlers = this.find('permissionHandlers');
+    const profileHandlers = this.find('profileHandlers');
+    const systemHandlers = this.find('systemHandlers');
+
+    if (!resourceHandlers || !friendHandlers || !permissionHandlers || !profileHandlers || !systemHandlers) {
+      if (this.debug) {
+        console.warn('KernelSubsystem: One or more handler facets not found. Ensure handler hooks are installed.');
+      }
+    }
+
+    const handlerMap = createKernelHandlerMap({
+      resourceHandlers,
+      friendHandlers,
+      permissionHandlers,
+      profileHandlers,
+      systemHandlers,
+      createResourceHandler: (m, p, o) => this.#handleCreateResource(m, o),
+      createFriendHandler: (m, p, o) => this.#handleCreateFriend(m, o)
+    });
+
+    for (const [routeKey, routeDef] of Object.entries(KERNEL_ROUTES)) {
+      const handlerMethod = routeDef.handler;
+      const handler = handlerMap[handlerMethod];
+      
+      if (!handler) {
+        if (this.debug) {
+          console.warn(`KernelSubsystem: Handler method ${handlerMethod} not found for route ${routeKey}`);
+        }
+        continue;
+      }
+
+      router.registerRoute(
+        routeDef.path,
+        async (message, params, options) => {
+          return await handler(message, params, options);
+        },
+        {
+          metadata: {
+            description: routeDef.description,
+            ...routeDef.metadata
+          }
+        }
+      );
+    }
+
+    if (this.debug) {
+      console.log(`KernelSubsystem: Registered ${Object.keys(KERNEL_ROUTES).length} kernel:// routes`);
+    }
+  }
+
+  /**
+   * Handle create resource message.
+   * 
+   * @private
+   * @param {Message} message - Message containing resource details
+   * @param {Object} options - Routing options (includes callerId from sendProtected)
+   * @returns {Resource} The created Resource instance
+   * @throws {Error} If callerId is missing, owner subsystem not found, or creation fails
+   */
+  async #handleCreateResource(message, options) {
+    // Extract PKR from options (set by sendProtected)
+    const callerPkr = options.callerId;
+    if (!callerPkr || !callerPkr.uuid) {
+      throw new Error('KernelSubsystem.createResource: callerId (PKR) required');
+    }
+
+    // Extract resource details from message body
+    const body = message.getBody();
+    const { name, resourceInstance, metadata = {} } = body;
+
+    // Validate inputs
+    if (!name || typeof name !== 'string') {
+      throw new Error('KernelSubsystem.createResource: name must be a non-empty string');
+    }
+    if (!resourceInstance) {
+      throw new Error('KernelSubsystem.createResource: resourceInstance is required');
+    }
+
+    // Get AccessControlSubsystem
+    const accessControl = this.getAccessControl();
+    if (!accessControl) {
+      throw new Error('KernelSubsystem.createResource: AccessControlSubsystem not available');
+    }
+
+    // Find owner subsystem from registry using caller PKR
+    const ownerSubsystem = this.#findSubsystemByPkr(callerPkr);
+    if (!ownerSubsystem) {
+      throw new Error(
+        `KernelSubsystem.createResource: owner subsystem not found for caller PKR ${callerPkr.uuid}`
+      );
+    }
+
+    // Delegate to AccessControlSubsystem
+    return accessControl.createResource(ownerSubsystem, name, resourceInstance, metadata);
+  }
+
+  /**
+   * Handle create friend message.
+   * 
+   * @private
+   * @param {Message} message - Message containing friend details
+   * @param {Object} options - Routing options (includes callerId from sendProtected)
+   * @returns {Friend} The created Friend instance
+   * @throws {Error} If callerId is missing or creation fails
+   */
+  async #handleCreateFriend(message, options) {
+    // Extract PKR from options (set by sendProtected)
+    const callerPkr = options.callerId;
+    if (!callerPkr || !callerPkr.uuid) {
+      throw new Error('KernelSubsystem.createFriend: callerId (PKR) required');
+    }
+
+    // Extract friend details from message body
+    const body = message.getBody();
+    const { name, endpoint = null, metadata = {}, sessionKey = null, role = null } = body;
+
+    // Validate inputs
+    if (!name || typeof name !== 'string') {
+      throw new Error('KernelSubsystem.createFriend: name must be a non-empty string');
+    }
+
+    // Get AccessControlSubsystem
+    const accessControl = this.getAccessControl();
+    if (!accessControl) {
+      throw new Error('KernelSubsystem.createFriend: AccessControlSubsystem not available');
+    }
+
+    // Delegate to AccessControlSubsystem
+    return accessControl.createFriend(name, {
+      endpoint,
+      metadata,
+      sessionKey,
+      role
+    });
+  }
+
+  /**
+   * Find a subsystem by matching its identity PKR.
+   * 
+   * @private
+   * @param {PKR} pkr - Public Key Record to match
+   * @returns {BaseSubsystem|null} Subsystem instance or null if not found
+   */
+  #findSubsystemByPkr(pkr) {
+    if (!pkr || !pkr.uuid) {
+      return null;
+    }
+
+    const messageSystem = this.messageSystem;
+    if (!messageSystem) {
+      return null;
+    }
+
+    const registry = messageSystem.find('messageSystemRegistry');
+    if (!registry) {
+      return null;
+    }
+
+    // Iterate through all registered subsystems to find one with matching PKR
+    for (const subsystem of registry.values()) {
+      if (subsystem.identity?.pkr?.uuid === pkr.uuid) {
+        return subsystem;
+      }
+    }
+
+    return null;
   }
 
   /**

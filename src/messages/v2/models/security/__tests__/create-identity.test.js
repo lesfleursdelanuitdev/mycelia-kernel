@@ -99,13 +99,27 @@ describe('createIdentity', () => {
     await expect(identity.sendPooledProtected('api://test', {})).rejects.toThrow(/kernel must support sendPooledProtected/);
   });
 
-  it('createResourceIdentity requires subsystem and access control', () => {
+  it('createResourceIdentity sends message to kernel and extracts result', async () => {
     const identity = createIdentity(principals, ownerPkr, kernel);
-    expect(() => identity.createResourceIdentity('cache', {})).toThrow(/setSubsystem/);
-    identity.setSubsystem({ name: 'subsystem' });
-    expect(() => identity.createResourceIdentity('cache', {})).toThrow(/AccessControlSubsystem/);
-    kernel.getAccessControl.mockReturnValue({ createResource: vi.fn().mockReturnValue('resource') });
-    expect(identity.createResourceIdentity('cache', {})).toBe('resource');
+    const mockResource = { name: 'cache', isResource: true, instance: { identity: {} } };
+    
+    // Mock the nested routing result structure
+    kernel.sendProtected.mockResolvedValue({
+      success: true,
+      subsystem: 'kernel',
+      messageId: 'msg-1',
+      result: {
+        accepted: true,
+        processed: true,
+        subsystem: 'kernel',
+        result: mockResource
+      }
+    });
+
+    // Should work with message routing (no subsystem check needed anymore)
+    const resource = await identity.createResourceIdentity('cache', { test: true });
+    expect(resource).toBe(mockResource);
+    expect(kernel.sendProtected).toHaveBeenCalled();
   });
 
   it('channel helpers require channel manager', () => {

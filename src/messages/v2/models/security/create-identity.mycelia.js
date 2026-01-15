@@ -1,4 +1,5 @@
 import { ReaderWriterSet } from './reader-writer-set.mycelia.js';
+import { Message } from '../message/message.mycelia.js';
 
 /**
  * createIdentity
@@ -353,28 +354,134 @@ export function createIdentity(principals, ownerPkr, kernel) {
    * Create a new Resource and register a corresponding Principal for it.
    * Uses the identity's subsystem as the owner instance.
    * 
+   * This method sends a message to kernel://create/resource, which routes through
+   * the kernel's message system. The kernel verifies the caller's PKR and delegates
+   * to AccessControlSubsystem.
+   * 
    * @param {string} name - Resource name
    * @param {object} resourceInstance - Required instance to attach to the resource
    * @param {object} [metadata={}] - Optional metadata for the resource
-   * @returns {Resource} The created Resource instance
+   * @returns {Promise<Resource>} The created Resource instance
    * @throws {Error} If subsystem is not set on identity
-   * @throws {Error} If AccessControlSubsystem is not available
+   * @throws {Error} If kernel message routing fails
    * @throws {Error} If name is invalid or resourceInstance is missing
    */
-  function createResourceIdentity(name, resourceInstance, metadata = {}) {
-    const ownerSubsystem = getSubsystem();
-    if (!ownerSubsystem) {
-      throw new Error('createIdentity.createResourceIdentity: subsystem must be set on identity. Call setSubsystem() first.');
+  async function createResourceIdentity(name, resourceInstance, metadata = {}) {
+    // Validate inputs
+    if (!name || typeof name !== 'string') {
+      throw new Error('createIdentity.createResourceIdentity: name must be a non-empty string');
+    }
+    if (!resourceInstance) {
+      throw new Error('createIdentity.createResourceIdentity: resourceInstance is required');
     }
 
-    const acs = getAccessControl();
-    if (!acs || typeof acs.createResource !== 'function') {
-      throw new Error(
-        'createIdentity.createResourceIdentity: AccessControlSubsystem with createResource() is not available on kernel.'
-      );
+    // Send message to kernel to create resource
+    // The kernel will verify the caller's PKR and find the owner subsystem
+    const message = new Message('kernel://create/resource', {
+      name,
+      resourceInstance,
+      metadata
+    });
+
+    // Use sendProtected to route through kernel (PKR is automatically set)
+    const routingResult = await sendProtected(message);
+    
+    // Extract the Resource from the nested routing result structure
+    // MessageRouter.route() returns: { success, subsystem, messageId, result: routeResult }
+    // routeToSubsystem() returns: { accepted, processed, subsystem, result: handlerResult }
+    // So we need: routingResult.result.result
+    if (routingResult && routingResult.result) {
+      const routeResult = routingResult.result;
+      
+      // If routeResult has a result property, that's the handler result (Resource)
+      if (routeResult.result !== undefined) {
+        return routeResult.result;
+      }
+      
+      // If routeResult is the Resource itself (fallback)
+      if (routeResult.name && routeResult.isResource) {
+        return routeResult;
+      }
+    }
+    
+    // If routingResult is the Resource itself (direct return)
+    if (routingResult && routingResult.name && routingResult.isResource) {
+      return routingResult;
+    }
+    
+    throw new Error(
+      `createIdentity.createResourceIdentity: unexpected result format from kernel://create/resource. ` +
+      `Expected nested result structure, got: ${JSON.stringify(routingResult, null, 2)}`
+    );
+  }
+
+  /**
+   * createFriend
+   * ------------
+   * Create a new Friend and register a corresponding Principal for it.
+   * 
+   * This method sends a message to kernel://create/friend, which routes through
+   * the kernel's message system. The kernel verifies the caller's PKR and delegates
+   * to AccessControlSubsystem.
+   * 
+   * @param {string} name - Friend name
+   * @param {object} [options={}] - Optional friend options
+   * @param {string} [options.endpoint=null] - Friend endpoint
+   * @param {object} [options.metadata={}] - Optional metadata for the friend
+   * @param {symbol} [options.sessionKey=null] - Optional session key
+   * @param {string} [options.role=null] - Optional role name (e.g., 'student', 'teacher')
+   * @returns {Promise<Friend>} The created Friend instance
+   * @throws {Error} If kernel message routing fails
+   * @throws {Error} If name is invalid
+   */
+  async function createFriend(name, options = {}) {
+    // Validate inputs
+    if (!name || typeof name !== 'string') {
+      throw new Error('createIdentity.createFriend: name must be a non-empty string');
     }
 
-    return acs.createResource(ownerSubsystem, name, resourceInstance, metadata);
+    const { endpoint = null, metadata = {}, sessionKey = null, role = null } = options;
+
+    // Send message to kernel to create friend
+    // The kernel will verify the caller's PKR
+    const message = new Message('kernel://create/friend', {
+      name,
+      endpoint,
+      metadata,
+      sessionKey,
+      role
+    });
+
+    // Use sendProtected to route through kernel (PKR is automatically set)
+    const routingResult = await sendProtected(message);
+    
+    // Extract the Friend from the nested routing result structure
+    // MessageRouter.route() returns: { success, subsystem, messageId, result: routeResult }
+    // routeToSubsystem() returns: { accepted, processed, subsystem, result: handlerResult }
+    // So we need: routingResult.result.result
+    if (routingResult && routingResult.result) {
+      const routeResult = routingResult.result;
+      
+      // If routeResult has a result property, that's the handler result (Friend)
+      if (routeResult.result !== undefined) {
+        return routeResult.result;
+      }
+      
+      // If routeResult is the Friend itself (fallback)
+      if (routeResult.name && routeResult.isFriend) {
+        return routeResult;
+      }
+    }
+    
+    // If routingResult is the Friend itself (direct return)
+    if (routingResult && routingResult.name && routingResult.isFriend) {
+      return routingResult;
+    }
+    
+    throw new Error(
+      `createIdentity.createFriend: unexpected result format from kernel://create/friend. ` +
+      `Expected nested result structure, got: ${JSON.stringify(routingResult, null, 2)}`
+    );
   }
 
   // ---- Channels (via ChannelManagerSubsystem) ----
@@ -543,6 +650,8 @@ export function createIdentity(principals, ownerPkr, kernel) {
     setSubsystem,
     // Resources
     createResourceIdentity,
+    // Friends
+    createFriend,
     // Role management
     getRole,
     setRole
